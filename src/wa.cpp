@@ -57,8 +57,10 @@ void wa_swap_bufs() {
 }
 
 i32 wa_buf_in(float x, float y) {
-    return x >= VIEWPORT_LEFT && x <= VIEWPORT_RIGHT //
-           && y >= VIEWPORT_TOP && y <= VIEWPORT_BOTTOM;
+    i32 in = x >= VIEWPORT_LEFT && x <= VIEWPORT_RIGHT //
+             && y >= VIEWPORT_TOP && y <= VIEWPORT_BOTTOM;
+
+    return in;
 }
 
 i32 wa_buf_idx(float x, float y) {
@@ -68,6 +70,87 @@ i32 wa_buf_idx(float x, float y) {
     MUST(idx >= 0 && idx < FRAME_BUF_SIZE);
 
     return idx;
+}
+
+V3f wa_up() { return {.v = {0.0f, 1.0f, 0.0f}}; }
+
+M3f wa_viewport() {
+    float w2 = (SCREEN_WIDTH - 1) / 2.0f;
+    float h2 = (SCREEN_HEIGHT - 1) / 2.0f;
+
+    // clang-format off
+    M3f m = {.m = {
+        w2,     0,      w2 - 0.5f,
+        0,      -h2,    h2 - 0.5f,
+        0,      0,      1,
+    }};
+    // clang-format on
+
+    return m;
+}
+
+M4f wa_look_at(V3f eye, V3f at, V3f up) {
+    MUST(eye != at);
+    MUST(!eq(up.mag(), 0.0f));
+
+    V3f z = eye - at;
+    V3f x = V3f::cross(up, z);
+    V3f y = V3f::cross(z, x);
+
+    x.normalize();
+    y.normalize();
+    z.normalize();
+
+    M4f r = M4f::rotation(x, y, z);
+    M4f t = M4f::translation_xyz(-eye.x, -eye.y, -eye.z);
+    M4f look_at = M4f::mmult(r, t);
+
+    return look_at;
+}
+
+M4f wa_orthographic(float l, float r, float b, float t, float n, float f) {
+    MUST(l < r);
+    MUST(b < t);
+    MUST(n > 0 && n < f);
+
+    V3f p = {
+        .x = -(r + l) / (r - l),
+        .y = -(t + b) / (t - b),
+        .z = -(f + n) / (f - n),
+    };
+
+    M4f orthographic = M4f::translation(p);
+    orthographic.rows[0].v[0] = 2.0f / (r - l);
+    orthographic.rows[1].v[1] = 2.0f / (t - b);
+    orthographic.rows[2].v[2] = -2.0f / (f - n);
+
+    return orthographic;
+}
+
+M4f wa_perspective(float l, float r, float b, float t, float n, float f) {
+    MUST(l < r);
+    MUST(b < t);
+    MUST(n > 0 && n < f);
+
+    M4f perspective = M4f::zeros();
+    perspective.rows[0].v[0] = (2.0f * n) / (r - l);
+    perspective.rows[0].v[2] = (r + l) / (r - l);
+    perspective.rows[1].v[1] = (2.0f * n) / (t - b);
+    perspective.rows[1].v[2] = (t + b) / (t - b);
+    perspective.rows[2].v[2] = -(f + n) / (f - n);
+    perspective.rows[2].v[3] = (-2.0f * f * n) / (f - n);
+    perspective.rows[3].v[2] = -1;
+
+    return perspective;
+}
+
+M4f wa_perspective_fov(float fov, float n, float f) {
+    MUST(fov > 0 && fov < M_PI_2);
+
+    float t = n * tanf(0.5f * fov);
+    float r = ((float)SCREEN_WIDTH / (float)SCREEN_HEIGHT) * t;
+
+    return wa_perspective(-r, r, -t, t, n, f);
 }
 
 void wa_draw_line(float x0, float y0, float xf, float yf, RGBA c0, RGBA cf) {
@@ -82,8 +165,8 @@ void wa_draw_line(float x0, float y0, float xf, float yf, RGBA c0, RGBA cf) {
         SWAP(c0, cf);
     }
 
+    V2f v = q - p;
     i32 argmin = !argmax;
-    V2f v = V2f::sub(q, p);
     float e0 = p.v[argmax];
     float ef = q.v[argmax];
     for (float e = e0; e <= ef; ++e) {

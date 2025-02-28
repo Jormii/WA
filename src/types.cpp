@@ -1,5 +1,7 @@
 #include "types.hpp"
 
+#pragma region Structs
+
 RGBA RGBA::mix(RGBA u, RGBA v, float t) {
     if (t <= 0) {
         return u;
@@ -16,7 +18,17 @@ RGBA RGBA::mix(RGBA u, RGBA v, float t) {
     return mix;
 }
 
+#pragma endregion
+
+#pragma region Functions
+
+/*
 i32 round(float x) {
     float offset = (x >= 0) ? 0.5f : -0.5f;
-    return (i32)(x + offset);
+    i32 round = (i32)(x + offset);
+
+    return round;
 }
+*/
+
+#pragma endregion

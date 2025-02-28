@@ -1,6 +1,6 @@
 {
     "editor.formatOnSave": true,
-    "C_Cpp.clang_format_style": "{IndentWidth: 4}",
+    "C_Cpp.clang_format_style": "{IndentWidth: 4, AlwaysBreakTemplateDeclarations: Yes}",
     "files.associations": {
         "*.embeddedhtml": "html",
         "stdint.h": "c"
