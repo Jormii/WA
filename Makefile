@@ -1,11 +1,11 @@
 TARGET = WA
-OBJS = main.o src/wa.o
+OBJS = main.o src/wa.o src/types.o
 
 LIBS = -lstdc++ -lpspvfpu
 
 INCDIR = inc C-CPP-CodeBase
-CFLAGS = -Wall -Wextra -Wpedantic
-CXXFLAGS = $(CFLAGS) -fno-rtti -fexceptions -std=gnu++23
+CFLAGS = -Wall -Wextra -Wpedantic -fno-rtti -fexceptions -std=gnu++23
+CXXFLAGS = $(CFLAGS) 
 ASFLAGS = $(CFLAGS)
 
 LIBDIR =

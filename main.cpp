@@ -3,7 +3,6 @@
 
 #include <pspkernel.h>
 
-#include "psp.hpp"
 #include "wa.hpp"
 
 PSP_MODULE_INFO("WA", 0, 1, 0);
@@ -16,7 +15,9 @@ int callback_thread(SceSize args, void *argp);
 int exit_callback(int arg1, int arg2, void *common);
 
 int main() {
-    RGBA r = {.channels = {.r = 255, .g = 0, .b = 0, .a = 0}};
+    RGBA r = {.r = 255, .g = 0, .b = 0, .a = 0};
+    RGBA g = {.r = 0, .g = 255, .b = 0, .a = 0};
+    RGBA b = {.r = 0, .g = 0, .b = 255, .a = 0};
 
     setup_callbacks();
     i32 ok = wa_init();
@@ -24,6 +25,7 @@ int main() {
 
     while (!exit_request) {
         wa_clear(r);
+        wa_draw_line(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, g, b);
         wa_swap_bufs();
     }
 
@@ -32,13 +34,12 @@ int main() {
 }
 
 SceUID setup_callbacks() {
-    SceUID thid =
-        sceKernelCreateThread("wa", callback_thread, 0x11, 0xFA0, 0, 0);
-    if (thid >= 0) {
-        sceKernelStartThread(thid, 0, 0);
+    SceUID id = sceKernelCreateThread("wa", callback_thread, 0x11, 0xFA0, 0, 0);
+    if (id >= 0) {
+        sceKernelStartThread(id, 0, 0);
     }
 
-    return thid;
+    return id;
 }
 
 #pragma GCC diagnostic push
