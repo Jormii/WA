@@ -17,6 +17,7 @@ union RGBA {
 #pragma GCC diagnostic pop
 
     static RGBA mix(RGBA u, RGBA v, float t);
+    static RGBA mix_bary(RGBA u, RGBA v, RGBA w, float a, float b, float g);
 };
 
 template <typename T, i32 N = 2>
@@ -30,6 +31,8 @@ union V2 {
         T x, y;
     };
 #pragma GCC diagnostic pop
+
+    static V2<float> bary(V2 u, V2 v, V2 w, float a, float b, float g);
 
     V2 operator-(const V2 &rhs) const;
 };
@@ -68,13 +71,17 @@ union V4 {
     };
 #pragma GCC diagnostic pop
 
+    V3<T> persp_div() const;
+
     static T dot(V4 u, V4 v);
 };
 
 using V2f = V2<float>;
+using V3i = V3<i32>;
 using V3f = V3<float>;
 using V4f = V4<float>;
 static_assert(sizeof(V2f) == 2 * sizeof(float));
+static_assert(sizeof(V3i) == 3 * sizeof(i32));
 static_assert(sizeof(V3f) == 3 * sizeof(float));
 static_assert(sizeof(V4f) == 4 * sizeof(float));
 
@@ -84,6 +91,8 @@ union M3 {
 
     T m[N * N];
     V3<T> rows[N];
+
+    V3<T> operator*(const V3<T> &rhs);
 };
 
 template <typename T, i32 N = 4>
@@ -95,6 +104,7 @@ union M4 {
 
     M4 transposed() const;
 
+    static M4 I();
     static M4 zeros();
     static M4 mmult(const M4 &a, const M4 &b);
     static M4 rotation(V3<T> x, V3<T> y, V3<T> z);
@@ -116,6 +126,12 @@ static_assert(sizeof(M4f) == 4 * 4 * sizeof(float));
 // template <typename T> T abs(T x);
 
 template <typename T>
+T min(T x, T y);
+
+template <typename T>
+T max(T x, T y);
+
+template <typename T>
 i32 eq(T x, T y);
 
 template <typename T>
@@ -133,9 +149,23 @@ void normalize_v(const T *u, T *out, i32 len);
 template <typename T>
 void sub_v(const T *u, const T *v, float *out, i32 len);
 
+template <typename T>
+void bary_v(const T *u, const T *v, const T *w, float a, float b, float c,
+            T *out, i32 len);
+
+template <typename T>
+void vmult_m(const T *m, const T *u, T *out, i32 len);
+
 #pragma endregion
 
 #pragma region T_IMPL
+
+template <typename T, i32 N>
+V2<float> V2<T, N>::bary(V2 u, V2 v, V2 w, float a, float b, float g) {
+    V2<float> out;
+    bary_v(u.v, v.v, w.v, a, b, g, out.v, N);
+    return out;
+}
 
 template <typename T, i32 N>
 V2<T, N> V2<T, N>::operator-(const V2 &rhs) const {
@@ -182,8 +212,27 @@ bool V3<T, N>::operator==(const V3 &rhs) const {
 }
 
 template <typename T, i32 N>
+V3<T> V4<T, N>::persp_div() const {
+    V3 out = {.x = x, .y = y, .z = z};
+    if (!eq(w, 0.0f)) {
+        out.x /= w;
+        out.y /= w;
+        out.z /= w;
+    }
+
+    return out;
+}
+
+template <typename T, i32 N>
 T V4<T, N>::dot(V4 u, V4 v) {
     return dot_v(u.v, v.v, N);
+}
+
+template <typename T, i32 N>
+V3<T> M3<T, N>::operator*(const V3<T> &rhs) {
+    V3<T> vmult;
+    vmult_m(m, rhs.v, vmult.v, N);
+    return vmult;
 }
 
 template <typename T, i32 N>
@@ -199,11 +248,29 @@ M4<T, N> M4<T, N>::transposed() const {
 }
 
 template <typename T, i32 N>
+M4<T, N> M4<T, N>::I() {
+    // clang-format off
+    M4f m = {.m = {
+        1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1,
+    }};
+    // clang-format on
+
+    return m;
+}
+
+template <typename T, i32 N>
 M4<T, N> M4<T, N>::zeros() {
-    M4 m;
-    for (i32 i = 0; i < N * N; ++i) {
-        m.m[i] = 0;
-    }
+    // clang-format off
+    M4f m = {.m = {
+        0, 0, 0, 0,
+        0, 0, 0, 0,
+        0, 0, 0, 0,
+        0, 0, 0, 0,
+    }};
+    // clang-format on
 
     return m;
 }
@@ -281,6 +348,16 @@ template <typename T> T abs(T x) {
 */
 
 template <typename T>
+T min(T x, T y) {
+    return (x <= y) ? x : y;
+}
+
+template <typename T>
+T max(T x, T y) {
+    return (x >= y) ? x : y;
+}
+
+template <typename T>
 inline i32 eq(T x, T y) {
     i32 eq = x == y;
     return eq;
@@ -355,6 +432,29 @@ void sub_v(const T *u, const T *v, float *out, i32 len) {
 
     for (i32 i = 0; i < len; ++i) {
         out[i] = u[i] - v[i];
+    }
+}
+
+template <typename T>
+void bary_v(const T *u, const T *v, const T *w, float a, float b, float g,
+            T *out, i32 len) {
+    MUST(u != NULL);
+    MUST(v != NULL);
+    MUST(w != NULL);
+    MUST(eq(a + b + g, 1.0f));
+    MUST(out != NULL);
+    MUST(len >= 0);
+
+    for (i32 i = 0; i < len; ++i) {
+        out[i] = a * u[i] + b * v[i] + g * w[i];
+    }
+}
+
+template <typename T>
+void vmult_m(const T *m, const T *u, T *out, i32 len) {
+    for (i32 i = 0; i < len; ++i) {
+        const T *m_row = m + i * len;
+        out[i] = dot_v(m_row, u, len);
     }
 }
 

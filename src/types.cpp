@@ -18,6 +18,21 @@ RGBA RGBA::mix(RGBA u, RGBA v, float t) {
     return mix;
 }
 
+RGBA RGBA::mix_bary(RGBA u, RGBA v, RGBA w, float a, float b, float g) {
+    if (a >= 1) {
+        return u;
+    } else if (b >= 1) {
+        return v;
+    } else if (g >= 1) {
+        return w;
+    }
+
+    RGBA mix;
+    bary_v(u.v, v.v, w.v, a, b, g, mix.v, 4);
+
+    return mix;
+}
+
 #pragma endregion
 
 #pragma region Functions

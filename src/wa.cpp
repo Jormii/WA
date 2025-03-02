@@ -153,6 +153,87 @@ M4f wa_perspective_fov(float fov, float n, float f) {
     return wa_perspective(-r, r, -t, t, n, f);
 }
 
+// clang-format off
+void wa_render(
+    const M4f &m, const M4f &v, const M4f &p,
+    BufC<V3f> vs, BufC<V2f> uvs, BufC<RGBA> cs, BufC<V3i> ts,
+    VertexSh_fp vertex_sh, FragmentSh_fp fragment_sh
+) {
+    // clang-format on
+
+    M3f w = wa_viewport();
+    M4f mv = M4f::mmult(v, m);
+    M4f mvp = M4f::mmult(p, mv);
+
+    for (i32 i = 0; i < ts.len; ++i) {
+        V3f screen[3];
+        RGBA screen_colors[3];
+        const V3i &triangle = ts[i];
+
+        for (i32 j = 0; j < 3; ++j) {
+            i32 vertex_idx = triangle.v[j];
+
+            V3f vertex = vs[vertex_idx];
+            V2f uv = uvs[vertex_idx];
+            RGBA color = cs[vertex_idx];
+
+            VertexShIn in = {
+                .vertex = vertex, .uv = uv, .color = color, .mvp = mvp};
+            VertexShOut out = vertex_sh(in);
+
+            V3f canonical = out.position.persp_div();
+            V3f canonical_xy = {.v = {canonical.x, canonical.y, 1}};
+            screen[j] = w * canonical_xy;
+        }
+
+        float x0, y0;
+        float xf, yf;
+        x0 = xf = screen[0].x;
+        y0 = yf = screen[0].y;
+        for (i32 j = 1; j < 3; ++j) {
+            x0 = min(x0, screen[j].x);
+            y0 = min(y0, screen[j].y);
+            xf = max(xf, screen[j].x);
+            yf = max(yf, screen[j].y);
+        }
+
+        for (float y = y0; y <= yf; ++y) {
+            for (float x = x0; x <= xf; ++x) {
+                if (!wa_buf_in(x, y)) {
+                    continue;
+                }
+
+                float alpha = wa_fline(x, y, screen[1].x, screen[1].y,
+                                       screen[2].x, screen[2].y) /
+                              wa_fline(screen[0].x, screen[0].y, screen[1].x,
+                                       screen[1].y, screen[2].x, screen[2].y);
+                float beta = wa_fline(x, y, screen[2].x, screen[2].y,
+                                      screen[0].x, screen[0].y) /
+                             wa_fline(screen[1].x, screen[1].y, screen[2].x,
+                                      screen[2].y, screen[0].x, screen[0].y);
+                float gamma = 1 - (alpha + beta);
+                if (alpha > 0 && beta > 0 && gamma > 0) {
+                    V2f uv = V2f::bary(uvs[triangle.v[0]], uvs[triangle.v[1]],
+                                       uvs[triangle.v[2]], alpha, beta, gamma);
+                    RGBA color =
+                        RGBA::mix_bary(screen_colors[0], screen_colors[1],
+                                       screen_colors[2], alpha, beta, gamma);
+
+                    FragmentShIn in = {.uv = uv, .color = color};
+                    FragmentShOut out = fragment_sh(in);
+
+                    i32 idx = wa_buf_idx(x, y);
+                    draw_buf[idx] = out.color;
+                }
+            }
+        }
+    }
+}
+
+float wa_fline(float x, float y, float px, float py, float qx, float qy) {
+    return (py - qy) * x + (qx - px) * y + px * qy - qx * py;
+}
+
 void wa_draw_line(float x0, float y0, float xf, float yf, RGBA c0, RGBA cf) {
     V2f p = {.v = {x0, y0}};
     V2f q = {.v = {xf, yf}};
@@ -184,4 +265,17 @@ void wa_draw_line(float x0, float y0, float xf, float yf, RGBA c0, RGBA cf) {
             draw_buf[idx] = color;
         }
     }
+}
+
+VertexShOut wa_vertex_sh_basic(const VertexShIn &in) {
+    const V3f &v = in.vertex;
+    V4f position = {.x = v.x, .y = v.y, .z = v.z, .w = 1.0f};
+
+    VertexShOut out = {.position = position, .color = in.color};
+    return out;
+}
+
+FragmentShOut wa_fragment_sh_basic(const FragmentShIn &in) {
+    FragmentShOut out = {.color = in.color};
+    return out;
 }
