@@ -10,6 +10,12 @@ union RGBA {
     u8 ptr[4];
     u32 rgba;
     V4<u8> v;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
+    struct {
+        u8 r, g, b, a;
+    };
+#pragma GCC diagnostic pop
 
     static RGBA mix(const RGBA &u, const RGBA &v, float t);
     static RGBA bary(                                //

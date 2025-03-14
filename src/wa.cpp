@@ -15,13 +15,9 @@ static struct pspvfpu_context *vfpuContext = NULL;
 // TODO: Arbitrary addresses?
 static RGBA *draw_buf = (RGBA *)DRAW_BUF_ADDR;
 static RGBA *display_buf = (RGBA *)DISPLAY_BUF_ADDR;
-static float *z_buf = NULL;
 
 i32 wa_init() {
     ASSERTZ(!initialized);
-
-    z_buf = (float *)malloc(FRAME_BUF_SIZE * sizeof(float));
-    ASSERTZ(z_buf != NULL);
 
     vfpuContext = pspvfpu_initcontext();
     ASSERTZ(vfpuContext != NULL);
@@ -40,6 +36,7 @@ i32 wa_clear(RGBA color) {
     RGBA *ptr = draw_buf;
     const RGBA *END = ptr + FRAME_BUF_SIZE;
 
+    color.a = ALPHA_CLEAR;
     i32 c = color.rgba;
     VFPU_ALIGNED i32 row[] = {c, c, c, c};
     VFPU_LOAD_V4_ROW(CLEAR_MAT, CLEAR_ROW, row, 0);
@@ -49,20 +46,6 @@ i32 wa_clear(RGBA color) {
         VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_ROW, ptr, 16);
         VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_ROW, ptr, 32);
         VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_ROW, ptr, 48);
-    }
-
-    float *ptr_z = z_buf;
-    const float *END_Z = ptr_z + FRAME_BUF_SIZE;
-
-    float z = Z_BUF_CLEAR;
-    VFPU_ALIGNED float row_z[] = {z, z, z, z};
-    VFPU_LOAD_V4_ROW(CLEAR_MAT, CLEAR_ROW, row_z, 0);
-
-    for (; ptr_z != END_Z; ptr_z += 16) {
-        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_ROW, ptr_z, 0);
-        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_ROW, ptr_z, 16);
-        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_ROW, ptr_z, 32);
-        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_ROW, ptr_z, 48);
     }
 
     return 1;
@@ -251,7 +234,17 @@ void wa_render(                                      //
                     );
                     MUST(z_out != NULL);
 
-                    if (z < Z_BUF_MAX || z > Z_BUF_CLEAR || z_buf[idx] <= z) {
+                    if (z < Z_BUF_MAX || z > Z_BUF_CLEAR) {
+                        continue;
+                    }
+
+                    float __alpha = map_range( //
+                        z, Z_BUF_MAX, Z_BUF_CLEAR, ALPHA_MAX, ALPHA_CLEAR);
+                    MUST(__alpha >= ALPHA_MAX);
+                    MUST(__alpha <= ALPHA_CLEAR);
+
+                    u8 a = (u8)__alpha;
+                    if (draw_buf[idx].a < a) {
                         continue;
                     }
 
@@ -263,8 +256,9 @@ void wa_render(                                      //
                     FragmentShIn in = {color};
                     FragmentShOut out = fragment_sh(in);
 
-                    draw_buf[idx] = out.color;
-                    z_buf[idx] = z;
+                    color = out.color;
+                    color.a = a;
+                    draw_buf[idx] = color;
                 }
             }
         }
@@ -276,6 +270,9 @@ float wa_fline(float x, float y, float px, float py, float qx, float qy) {
 }
 
 void wa_draw_line(float x0, float y0, float xf, float yf, RGBA c0, RGBA cf) {
+    c0.a = ALPHA_MAX;
+    cf.a = ALPHA_MAX;
+
     V2f p = {x0, y0};
     V2f q = {xf, yf};
     float dx = abs(xf - x0);
@@ -304,7 +301,6 @@ void wa_draw_line(float x0, float y0, float xf, float yf, RGBA c0, RGBA cf) {
             i32 idx = wa_buf_idx(pixel.x(), pixel.y());
 
             draw_buf[idx] = color;
-            z_buf[idx] = Z_BUF_MAX;
         }
     }
 }

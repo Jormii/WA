@@ -17,6 +17,8 @@
 
 #define Z_BUF_MAX -1.0f
 #define Z_BUF_CLEAR 1.0f
+#define ALPHA_MAX 0
+#define ALPHA_CLEAR 255
 
 #define VERTEX_SH_STUB(NAME) VertexShOut NAME(const VertexShIn *in)
 #define FRAGMENT_SH_STUB(NAME) FragmentShOut NAME(const FragmentShIn *in)
