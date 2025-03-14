@@ -10,17 +10,27 @@ static const auto SETBUF = PSP_DISPLAY_SETBUF_NEXTFRAME;
 static const auto PIXEL_FMT = PSP_DISPLAY_PIXEL_FORMAT_8888;
 
 static i32 initialized = 0;
-static struct pspvfpu_context *vfpuContext = NULL;
+static struct pspvfpu_context *vfpu_context = NULL;
 
-// TODO: Arbitrary addresses?
-static RGBA *draw_buf = (RGBA *)DRAW_BUF_ADDR;
-static RGBA *display_buf = (RGBA *)DISPLAY_BUF_ADDR;
+// NOTE: Allows for arbitrary addresses
+// TODO: Is it worth it?
+static RGBA *bufs = NULL;
+static RGBA *draw_buf = NULL;
+static RGBA *display_buf = NULL;
 
 i32 wa_init() {
     ASSERTZ(!initialized);
 
-    vfpuContext = pspvfpu_initcontext();
-    ASSERTZ(vfpuContext != NULL);
+    bufs = (RGBA *)malloc(2 * FRAME_BUF_SIZE * sizeof(RGBA));
+    ASSERTZ(bufs != NULL);
+
+    draw_buf = bufs;
+    display_buf = bufs + FRAME_BUF_SIZE;
+    ASSERTZ(draw_buf != NULL);
+    ASSERTZ(display_buf != NULL);
+
+    vfpu_context = pspvfpu_initcontext();
+    ASSERTZ(vfpu_context != NULL);
 
     sceDisplaySetMode(0, SCREEN_WIDTH, SCREEN_HEIGHT);
     sceDisplaySetFrameBuf(display_buf, FRAME_BUF_WIDTH, PIXEL_FMT, SETBUF);
