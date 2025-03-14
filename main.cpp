@@ -6,9 +6,6 @@
 
 #include "wa.hpp"
 
-PSP_MODULE_INFO("WA", 0, 1, 0);
-PSP_MAIN_THREAD_ATTR(THREAD_ATTR_USER);
-
 enum ExitCode {
     OK,
     INIT_ERR,
@@ -115,24 +112,3 @@ int exit_callback(int arg1, int arg2, void *common) {
     return 0;
 }
 #pragma GCC diagnostic pop
-
-// See c.h::MUST
-void must_cb(const char *expr, const char *file, i32 line) {
-    // NOTE: fprintf prints a newline after each argument
-
-    char buf[256];
-    snprintf(buf, 256, "Failed MUST %s:%ld: %s\n", file, line, expr);
-    fputs(buf, stderr);
-    fflush(stderr);
-
-    sceKernelExitGame();
-}
-
-// See c.h::ASSERTZ
-void assert_cb(const char *expr, const char *file, i32 line) {
-    // NOTE: fprintf prints a newline after each argument
-
-    char buf[256];
-    snprintf(buf, 256, "Failed ASSERTZ %s:%ld: %s\n", file, line, expr);
-    fputs(buf, stderr);
-}
