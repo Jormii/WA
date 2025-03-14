@@ -12,16 +12,27 @@
 #define VFPU_OP_LOAD "lv"
 #define VFPU_OP_STORE "sv"
 
+// TODO: Assert OFFSET?
+#define VFPU_ASSERT(ptr, OFFSET)                                               \
+    TESTED();                                                                  \
+    ASSERTZ(ptr != NULL);
+
+#define VFPU_ALIGNED_ASSERT(ptr, OFFSET)                                       \
+    TESTED();                                                                  \
+    VFPU_ASSERT(ptr, OFFSET);                                                  \
+    ASSERTZ(((size_t)(ptr) % 16) == 0);
+
 #define VFPU_INST_MEMORY(OP_CODE, DIM, REG, ptr, OFFSET)                       \
-    ASSERTZ(ptr != NULL)                                                       \
+    NOTE("LEFT UNTESTED");                                                     \
+    VFPU_ASSERT(ptr, OFFSET);                                                  \
     asm(OP_CODE "." DIM " " REG ", " #OFFSET "(%0)" : : "r"(ptr) : "memory");
 
-// TODO: Assert OFFSET?
-// TODO: Assert alignment
 #define VFPU_LOAD_V4_ROW(MAT, ROW, ptr, OFFSET)                                \
+    TESTED();                                                                  \
+    VFPU_ALIGNED_ASSERT(ptr, OFFSET);                                          \
     VFPU_INST_MEMORY(VFPU_OP_LOAD, VFPU_V4, VFPU_R(MAT, ROW, 0), ptr, OFFSET);
 
-// TODO: Assert OFFSET?
-// TODO: Assert alignment
 #define VFPU_STORE_V4_ROW(MAT, ROW, ptr, OFFSET)                               \
+    TESTED();                                                                  \
+    VFPU_ALIGNED_ASSERT(ptr, OFFSET);                                          \
     VFPU_INST_MEMORY(VFPU_OP_STORE, VFPU_V4, VFPU_R(MAT, ROW, 0), ptr, OFFSET);
