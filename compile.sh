@@ -2,7 +2,7 @@ set -e
 
 python "C-CPP-CodeBase/compile_tests.py"
 for BUILD in "TEST"; do
-# for BUILD in "TEST" "DEBUG"; do
+# for BUILD in "TEST" "DEBUG" "RELEASE"; do
     make -B BUILD=$BUILD
 
     DIR="bin/$BUILD"
