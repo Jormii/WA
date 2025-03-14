@@ -15,13 +15,14 @@
 #define VIEWPORT_TOP -0.5f
 #define VIEWPORT_BOTTOM (SCREEN_HEIGHT - 1 - 0.5f)
 
-#define VERTEX_SH_STUB(NAME)                                                   \
-    VertexShOut NAME(V3f v, V2f uv, RGBA c, const M4f &mvp)
-#define FRAGMENT_SH_STUB(NAME) FragmentShOut NAME(V2f uv, RGBA c)
+#define Z_BUF_MAX -1.0f
+#define Z_BUF_CLEAR 1.0f
+
+#define VERTEX_SH_STUB(NAME) VertexShOut NAME(const VertexShIn *in)
+#define FRAGMENT_SH_STUB(NAME) FragmentShOut NAME(const FragmentShIn *in)
 
 struct VertexShIn {
     V3f vertex;
-    V2f uv;
     RGBA color;
 
     const M4f &mvp;
@@ -33,7 +34,6 @@ struct VertexShOut {
 };
 
 struct FragmentShIn {
-    V2f uv;
     RGBA color;
 };
 
@@ -44,8 +44,8 @@ struct FragmentShOut {
 typedef VertexShOut (*VertexSh_fp)(const VertexShIn &in);
 typedef FragmentShOut (*FragmentSh_fp)(const FragmentShIn &in);
 
-i32 wa_init();
-void wa_clear(RGBA color);
+[[nodiscard]] i32 wa_init();
+[[nodiscard]] i32 wa_clear(RGBA color);
 void wa_swap_bufs();
 
 i32 wa_buf_in(float x, float y);
@@ -58,13 +58,11 @@ M4f wa_orthographic(float l, float r, float b, float t, float n, float f);
 M4f wa_perspective(float l, float r, float b, float t, float n, float f);
 M4f wa_perspective_fov(float fov, float n, float f);
 
-// clang-format off
-void wa_render(
-    const M4f &m, const M4f &v, const M4f &p,
-    BufC<V3f> vs, BufC<V2f> uvs, BufC<RGBA> cs, BufC<V3i> ts,
-    VertexSh_fp vertex_sh, FragmentSh_fp fragment_sh
+void wa_render(                                      //
+    const M4f &m, const M4f &v, const M4f &p,        //
+    Buf<V3f> vs, Buf<RGBA> cs, Buf<V3i> ts,          //
+    VertexSh_fp vertex_sh, FragmentSh_fp fragment_sh //
 );
-// clang-format on
 
 float wa_fline(float x, float y, float px, float py, float qx, float qy);
 

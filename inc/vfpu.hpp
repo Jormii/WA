@@ -13,7 +13,7 @@
 #define VFPU_OP_STORE "sv"
 
 #define VFPU_INST_MEMORY(OP_CODE, DIM, REG, ptr, OFFSET)                       \
-    MUST(ptr != NULL)                                                          \
+    ASSERTZ(ptr != NULL)                                                       \
     asm(OP_CODE "." DIM " " REG ", " #OFFSET "(%0)" : : "r"(ptr) : "memory");
 
 // TODO: Assert OFFSET?

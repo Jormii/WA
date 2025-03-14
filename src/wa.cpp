@@ -15,9 +15,13 @@ static struct pspvfpu_context *vfpuContext = NULL;
 // TODO: Arbitrary addresses?
 static RGBA *draw_buf = (RGBA *)DRAW_BUF_ADDR;
 static RGBA *display_buf = (RGBA *)DISPLAY_BUF_ADDR;
+static float *z_buf = NULL;
 
 i32 wa_init() {
     ASSERTZ(!initialized);
+
+    z_buf = (float *)malloc(FRAME_BUF_SIZE * sizeof(float));
+    ASSERTZ(z_buf != NULL);
 
     vfpuContext = pspvfpu_initcontext();
     ASSERTZ(vfpuContext != NULL);
@@ -29,7 +33,7 @@ i32 wa_init() {
     return 1;
 }
 
-void wa_clear(RGBA color) {
+i32 wa_clear(RGBA color) {
 #define CLEAR_MAT 0
 #define CLEAR_ROW 0
 
@@ -46,6 +50,22 @@ void wa_clear(RGBA color) {
         VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_ROW, ptr, 32);
         VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_ROW, ptr, 48);
     }
+
+    float *ptr_z = z_buf;
+    const float *END_Z = ptr_z + FRAME_BUF_SIZE;
+
+    float z = Z_BUF_CLEAR;
+    VFPU_ALIGNED float row_z[] = {z, z, z, z};
+    VFPU_LOAD_V4_ROW(CLEAR_MAT, CLEAR_ROW, row_z, 0);
+
+    for (; ptr_z != END_Z; ptr_z += 16) {
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_ROW, ptr_z, 0);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_ROW, ptr_z, 16);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_ROW, ptr_z, 32);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_ROW, ptr_z, 48);
+    }
+
+    return 1;
 
 #undef CLEAR_MAT
 #undef CLEAR_ROW
@@ -72,19 +92,17 @@ i32 wa_buf_idx(float x, float y) {
     return idx;
 }
 
-V3f wa_up() { return {.v = {0.0f, 1.0f, 0.0f}}; }
+V3f wa_up() { return {0.0f, 1.0f, 0.0f}; }
 
 M3f wa_viewport() {
-    float w2 = (SCREEN_WIDTH - 1) / 2.0f;
-    float h2 = (SCREEN_HEIGHT - 1) / 2.0f;
+    float w2 = 0.5f * (SCREEN_WIDTH - 1);
+    float h2 = 0.5f * (SCREEN_HEIGHT - 1);
 
-    // clang-format off
-    M3f m = {.m = {
-        w2,     0,      w2 - 0.5f,
-        0,      -h2,    h2 - 0.5f,
-        0,      0,      1,
-    }};
-    // clang-format on
+    M3f m = {
+        w2, 0,   w2 - 0.5f, //
+        0,  -h2, h2 - 0.5f, //
+        0,  0,   1,         //
+    };
 
     return m;
 }
@@ -97,13 +115,13 @@ M4f wa_look_at(V3f eye, V3f at, V3f up) {
     V3f x = V3f::cross(up, z);
     V3f y = V3f::cross(z, x);
 
-    x.normalize();
-    y.normalize();
-    z.normalize();
+    x = x.norm();
+    y = y.norm();
+    z = z.norm();
 
-    M4f r = M4f::rotation(x, y, z);
-    M4f t = M4f::translation_xyz(-eye.x, -eye.y, -eye.z);
-    M4f look_at = M4f::mmult(r, t);
+    M4f r = rotation_m(x, y, z);
+    M4f t = translation_m(-eye);
+    M4f look_at = r * t;
 
     return look_at;
 }
@@ -114,15 +132,15 @@ M4f wa_orthographic(float l, float r, float b, float t, float n, float f) {
     MUST(n > 0 && n < f);
 
     V3f p = {
-        .x = -(r + l) / (r - l),
-        .y = -(t + b) / (t - b),
-        .z = -(f + n) / (f - n),
+        -(r + l) / (r - l),
+        -(t + b) / (t - b),
+        -(f + n) / (f - n),
     };
 
-    M4f orthographic = M4f::translation(p);
-    orthographic.rows[0].v[0] = 2.0f / (r - l);
-    orthographic.rows[1].v[1] = 2.0f / (t - b);
-    orthographic.rows[2].v[2] = -2.0f / (f - n);
+    M4f orthographic = translation_m(p);
+    *(orthographic.get(0, 0)) = 2.0f / (r - l);
+    *(orthographic.get(1, 1)) = 2.0f / (t - b);
+    *(orthographic.get(2, 2)) = -2.0f / (f - n);
 
     return orthographic;
 }
@@ -133,13 +151,13 @@ M4f wa_perspective(float l, float r, float b, float t, float n, float f) {
     MUST(n > 0 && n < f);
 
     M4f perspective = M4f::zeros();
-    perspective.rows[0].v[0] = (2.0f * n) / (r - l);
-    perspective.rows[0].v[2] = (r + l) / (r - l);
-    perspective.rows[1].v[1] = (2.0f * n) / (t - b);
-    perspective.rows[1].v[2] = (t + b) / (t - b);
-    perspective.rows[2].v[2] = -(f + n) / (f - n);
-    perspective.rows[2].v[3] = (-2.0f * f * n) / (f - n);
-    perspective.rows[3].v[2] = -1;
+    *(perspective.get(0, 0)) = (2.0f * n) / (r - l);
+    *(perspective.get(0, 2)) = (r + l) / (r - l);
+    *(perspective.get(1, 1)) = (2.0f * n) / (t - b);
+    *(perspective.get(1, 2)) = (t + b) / (t - b);
+    *(perspective.get(2, 2)) = -(f + n) / (f - n);
+    *(perspective.get(2, 3)) = (-2.0f * f * n) / (f - n);
+    *(perspective.get(3, 2)) = -1;
 
     return perspective;
 }
@@ -153,77 +171,100 @@ M4f wa_perspective_fov(float fov, float n, float f) {
     return wa_perspective(-r, r, -t, t, n, f);
 }
 
-// clang-format off
-void wa_render(
-    const M4f &m, const M4f &v, const M4f &p,
-    BufC<V3f> vs, BufC<V2f> uvs, BufC<RGBA> cs, BufC<V3i> ts,
-    VertexSh_fp vertex_sh, FragmentSh_fp fragment_sh
+void wa_render(                                      //
+    const M4f &m, const M4f &v, const M4f &p,        //
+    Buf<V3f> vs, Buf<RGBA> cs, Buf<V3i> ts,          //
+    VertexSh_fp vertex_sh, FragmentSh_fp fragment_sh //
 ) {
-    // clang-format on
-
     M3f w = wa_viewport();
-    M4f mv = M4f::mmult(v, m);
-    M4f mvp = M4f::mmult(p, mv);
+    M4f mv = v * m;
+    M4f mvp = p * mv;
 
     for (i32 i = 0; i < ts.len; ++i) {
         V3f screen[3];
         RGBA screen_colors[3];
-        const V3i &triangle = ts[i];
+        const V3i &triangle = *ts.get(i);
 
         for (i32 j = 0; j < 3; ++j) {
-            i32 vertex_idx = triangle.v[j];
+            i32 vertex_idx = *triangle.get(j);
 
-            V3f vertex = vs[vertex_idx];
-            V2f uv = uvs[vertex_idx];
-            RGBA color = cs[vertex_idx];
+            V3f vertex = *vs.get(vertex_idx);
+            RGBA color = *cs.get(vertex_idx);
 
-            VertexShIn in = {
-                .vertex = vertex, .uv = uv, .color = color, .mvp = mvp};
+            VertexShIn in = {vertex, color, mvp};
             VertexShOut out = vertex_sh(in);
 
-            V3f canonical = out.position.persp_div();
-            V3f canonical_xy = {.v = {canonical.x, canonical.y, 1}};
+            V3f canonical = persp_div(out.position);
+            V3f canonical_xy = {canonical.x(), canonical.y(), 1};
             screen[j] = w * canonical_xy;
+            screen_colors[j] = out.color;
+
+            screen[j].z() = canonical.z();
         }
 
         float x0, y0;
         float xf, yf;
-        x0 = xf = screen[0].x;
-        y0 = yf = screen[0].y;
+        x0 = xf = screen[0].x();
+        y0 = yf = screen[0].y();
         for (i32 j = 1; j < 3; ++j) {
-            x0 = min(x0, screen[j].x);
-            y0 = min(y0, screen[j].y);
-            xf = max(xf, screen[j].x);
-            yf = max(yf, screen[j].y);
+            x0 = min(x0, screen[j].x());
+            y0 = min(y0, screen[j].y());
+            xf = max(xf, screen[j].x());
+            yf = max(yf, screen[j].y());
         }
+
+        x0 = max(x0, VIEWPORT_LEFT);
+        xf = min(xf, VIEWPORT_RIGHT);
+        y0 = max(y0, VIEWPORT_TOP);
+        yf = min(yf, VIEWPORT_BOTTOM);
+
+#if 1
+        V3f *_s = screen;
+        RGBA _b = {.rgba = 0xFFFFFFFF};
+        wa_draw_line(_s[0].x(), _s[0].y(), _s[1].x(), _s[1].y(), _b, _b);
+        wa_draw_line(_s[1].x(), _s[1].y(), _s[2].x(), _s[2].y(), _b, _b);
+        wa_draw_line(_s[2].x(), _s[2].y(), _s[0].x(), _s[0].y(), _b, _b);
+#endif
 
         for (float y = y0; y <= yf; ++y) {
             for (float x = x0; x <= xf; ++x) {
-                if (!wa_buf_in(x, y)) {
-                    continue;
-                }
+                V3f &sx = screen[0];
+                V3f &sy = screen[1];
+                V3f &sz = screen[2];
 
-                float alpha = wa_fline(x, y, screen[1].x, screen[1].y,
-                                       screen[2].x, screen[2].y) /
-                              wa_fline(screen[0].x, screen[0].y, screen[1].x,
-                                       screen[1].y, screen[2].x, screen[2].y);
-                float beta = wa_fline(x, y, screen[2].x, screen[2].y,
-                                      screen[0].x, screen[0].y) /
-                             wa_fline(screen[1].x, screen[1].y, screen[2].x,
-                                      screen[2].y, screen[0].x, screen[0].y);
+                float alpha =
+                    wa_fline(x, y, sy.x(), sy.y(), sz.x(), sz.y()) /
+                    wa_fline(sx.x(), sx.y(), sy.x(), sy.y(), sz.x(), sz.y());
+                float beta =
+                    wa_fline(x, y, sz.x(), sz.y(), sx.x(), sx.y()) /
+                    wa_fline(sy.x(), sy.y(), sz.x(), sz.y(), sx.x(), sx.y());
                 float gamma = 1 - (alpha + beta);
-                if (alpha > 0 && beta > 0 && gamma > 0) {
-                    V2f uv = V2f::bary(uvs[triangle.v[0]], uvs[triangle.v[1]],
-                                       uvs[triangle.v[2]], alpha, beta, gamma);
-                    RGBA color =
-                        RGBA::mix_bary(screen_colors[0], screen_colors[1],
-                                       screen_colors[2], alpha, beta, gamma);
 
-                    FragmentShIn in = {.uv = uv, .color = color};
+                if (alpha > 0 && beta > 0 && gamma > 0) {
+                    i32 idx = wa_buf_idx(x, y);
+
+                    float z = Z_BUF_CLEAR;
+                    const float *z_out = bary_v(   //
+                        &sx.z(), &sy.z(), &sz.z(), //
+                        alpha, beta, gamma,        //
+                        &z, 1                      //
+                    );
+                    MUST(z_out != NULL);
+
+                    if (z < Z_BUF_MAX || z > Z_BUF_CLEAR || z_buf[idx] <= z) {
+                        continue;
+                    }
+
+                    RGBA color = RGBA::bary(                                  //
+                        screen_colors[0], screen_colors[1], screen_colors[2], //
+                        alpha, beta, gamma                                    //
+                    );
+
+                    FragmentShIn in = {color};
                     FragmentShOut out = fragment_sh(in);
 
-                    i32 idx = wa_buf_idx(x, y);
                     draw_buf[idx] = out.color;
+                    z_buf[idx] = z;
                 }
             }
         }
@@ -235,47 +276,49 @@ float wa_fline(float x, float y, float px, float py, float qx, float qy) {
 }
 
 void wa_draw_line(float x0, float y0, float xf, float yf, RGBA c0, RGBA cf) {
-    V2f p = {.v = {x0, y0}};
-    V2f q = {.v = {xf, yf}};
+    V2f p = {x0, y0};
+    V2f q = {xf, yf};
     float dx = abs(xf - x0);
     float dy = abs(yf - y0);
 
     i32 argmax = dx <= dy;
-    if (q.v[argmax] < p.v[argmax]) {
+    if (q.ptr[argmax] < p.ptr[argmax]) {
         SWAP(p, q);
         SWAP(c0, cf);
     }
 
     V2f v = q - p;
     i32 argmin = !argmax;
-    float e0 = p.v[argmax];
-    float ef = q.v[argmax];
+    float e0 = p.ptr[argmax];
+    float ef = q.ptr[argmax];
     for (float e = e0; e <= ef; ++e) {
-        float t = (e - e0) / v.v[argmax];
-        float e_argmin = p.v[argmin] + t * v.v[argmin];
+        float t = (e - e0) / v.ptr[argmax];
+        float e_argmin = p.ptr[argmin] + t * v.ptr[argmin];
 
         V2f pixel;
-        pixel.v[argmax] = e;
-        pixel.v[argmin] = e_argmin;
+        pixel.ptr[argmax] = e;
+        pixel.ptr[argmin] = e_argmin;
 
-        if (wa_buf_in(pixel.x, pixel.y)) {
+        if (wa_buf_in(pixel.x(), pixel.y())) {
             RGBA color = RGBA::mix(c0, cf, t);
-            i32 idx = wa_buf_idx(pixel.x, pixel.y);
+            i32 idx = wa_buf_idx(pixel.x(), pixel.y());
 
             draw_buf[idx] = color;
+            z_buf[idx] = Z_BUF_MAX;
         }
     }
 }
 
 VertexShOut wa_vertex_sh_basic(const VertexShIn &in) {
     const V3f &v = in.vertex;
-    V4f position = {.x = v.x, .y = v.y, .z = v.z, .w = 1.0f};
+    V4f position = {v.x(), v.y(), v.z(), 1.0f};
+    V4f out_position = in.mvp * position;
 
-    VertexShOut out = {.position = position, .color = in.color};
+    VertexShOut out = {out_position, in.color};
     return out;
 }
 
 FragmentShOut wa_fragment_sh_basic(const FragmentShIn &in) {
-    FragmentShOut out = {.color = in.color};
+    FragmentShOut out = {in.color};
     return out;
 }
