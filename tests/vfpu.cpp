@@ -61,6 +61,56 @@ i32 VFPU_LOAD_V4_ROW__and__VFPU_STORE_V4_ROW_test(void) {
 #undef ROW
 }
 
+// vfpu.hpp::VFPU_LOAD_M4
+// vfpu.hpp::VFPU_STORE_M4
+i32 VFPU_LOAD_M4__and__VFPU_STORE_M4_test(void) {
+#define MAT 0
+
+    VFPU_ALIGNED i32 load[4 * 4] = {
+        2, 3, 4, 5, //
+        3, 4, 5, 6, //
+        4, 5, 6, 7, //
+        5, 6, 7, 8, //
+    };
+    VFPU_ALIGNED i32 store[C_ARR_LEN(load)];
+
+    VFPU_LOAD_M4(MAT, load, 0);
+    VFPU_STORE_M4(MAT, store, 0);
+    ASSERTZ(eq_v(store, load, C_ARR_LEN(load)));
+
+    return 1;
+
+#undef MAT
+}
+
+i32 mmult_m__float_4_test(void) {
+    VFPU_ALIGNED float m[4 * 4] = {
+        2, 3, 4, 5, //
+        3, 4, 5, 6, //
+        4, 5, 6, 7, //
+        5, 6, 7, 8, //
+    };
+    VFPU_ALIGNED float a[C_ARR_LEN(m)] = {
+        1, 2, 3, 4, //
+        4, 3, 2, 1, //
+        6, 7, 8, 9, //
+        9, 8, 7, 6, //
+    };
+    VFPU_ALIGNED float expected_mmult[C_ARR_LEN(m)] = {
+        83,  81,  79,  77,  //
+        103, 101, 99,  97,  //
+        123, 121, 119, 117, //
+        143, 141, 139, 137, //
+    };
+
+    VFPU_ALIGNED float mmult[C_ARR_LEN(m)];
+    const float *out = mmult_m<4, float>(m, a, mmult);
+    ASSERTZ(out == mmult);
+    ASSERTZ(eq_v(mmult, expected_mmult, C_ARR_LEN(m)));
+
+    return 1;
+}
+
 i32 __VFPU_deinit_test(void) {
     pspvfpu_deletecontext(vfpu_context);
     return 1;
