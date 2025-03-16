@@ -4,7 +4,8 @@ MAIN = main.o
 OBJS = cb.o src/types.o src/wa.o
 
 MAIN_TEST = test.o
-OBJS_TEST = tests/vfpu.o
+OBJS_TEST = tests/vfpu.o \
+			C-CPP-CodeBase/tests/c.o C-CPP-CodeBase/tests/cpp.o
 
 LIBS = -lstdc++ -lpspvfpu
 
