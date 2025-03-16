@@ -8,22 +8,22 @@
 PSP_MODULE_INFO("WA", 0, 1, 0);
 PSP_MAIN_THREAD_ATTR(THREAD_ATTR_USER);
 
-void __printf(const char *expr, const char *file, i32 line) {
+void __printf(const char *what, const char *expr, const char *file, i32 line) {
     // NOTE: fprintf prints a newline after each argument
     char buf[256];
-    snprintf(buf, 256, "Failed MUST %s:%ld: %s\n", file, line, expr);
+    snprintf(buf, 256, "Failed %s %s:%ld: %s\n", what, file, line, expr);
     fputs(buf, stderr);
 }
 
 // See c.h::MUST
 void must_cb(const char *expr, const char *file, i32 line) {
-    __printf(expr, file, line);
+    __printf("MUST", expr, file, line);
     sceKernelExitGame();
 }
 
 // See c.h::ASSERTZ
 void assert_cb(const char *expr, const char *file, i32 line) {
-    __printf(expr, file, line);
+    __printf("ASSERT", expr, file, line);
 }
 
 // See compile_tests.py
