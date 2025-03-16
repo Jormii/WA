@@ -49,8 +49,8 @@ M4<T> translation_xyz_m(const T &x, const T &y, const T &z);
 template <typename T>
 V3f persp_div(const V4<T> &u) {
     T w = u.w();
-    if (!eq(w, 0.0f)) {
-        return u.xyz() / w;
+    if (!eq(w, (T)0)) {
+        return u.xyz() / (float)w;
     } else {
         return u.xyz().template cast<float>(); // BRUH
     }
