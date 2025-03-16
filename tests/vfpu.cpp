@@ -31,13 +31,13 @@ i32 __VFPU_ALIGNED_ASSERT_call(const i32 *ptr) {
 }
 
 i32 VFPU_ALIGNED_ASSERT_test(void) {
-    VFPU_ALIGNED V4i v = V4i::zeros();
+    VFPU_ALIGNED i32 u[4] = {2, 3, 4, 5};
 
-    ASSERTZ(__VFPU_ALIGNED_ASSERT_call(v.ptr));
-    ASSERTZ(!__VFPU_ALIGNED_ASSERT_call(v.ptr + 1));
-    ASSERTZ(!__VFPU_ALIGNED_ASSERT_call(v.ptr + 2));
-    ASSERTZ(!__VFPU_ALIGNED_ASSERT_call(v.ptr + 3));
-    ASSERTZ(__VFPU_ALIGNED_ASSERT_call(v.ptr + 4));
+    ASSERTZ(__VFPU_ALIGNED_ASSERT_call(u + 0) == 1);
+    ASSERTZ(__VFPU_ALIGNED_ASSERT_call(u + 1) == 0);
+    ASSERTZ(__VFPU_ALIGNED_ASSERT_call(u + 2) == 0);
+    ASSERTZ(__VFPU_ALIGNED_ASSERT_call(u + 3) == 0);
+    ASSERTZ(__VFPU_ALIGNED_ASSERT_call(u + 4) == 1);
 
     return 1;
 }
@@ -48,12 +48,12 @@ i32 VFPU_LOAD_V4_ROW__and__VFPU_STORE_V4_ROW_test(void) {
 #define MAT 0
 #define ROW 0
 
-    VFPU_ALIGNED V4i load = {1, 2, 3, 4};
-    VFPU_LOAD_V4_ROW(MAT, ROW, load.ptr, 0);
+    VFPU_ALIGNED i32 load[4] = {2, 3, 4, 5};
+    VFPU_ALIGNED i32 store[C_ARR_LEN(load)];
 
-    VFPU_ALIGNED V4i store = V4i::zeros();
-    VFPU_STORE_V4_ROW(MAT, ROW, store.ptr, 0);
-    ASSERTZ(store == load);
+    VFPU_LOAD_V4_ROW(MAT, ROW, load, 0);
+    VFPU_STORE_V4_ROW(MAT, ROW, store, 0);
+    ASSERTZ(eq_v(store, load, C_ARR_LEN(load)));
 
     return 1;
 
