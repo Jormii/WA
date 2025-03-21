@@ -23,6 +23,10 @@ int callback_thread(SceSize args, void *argp);
 int exit_callback(int arg1, int arg2, void *common);
 
 int main() {
+    prof_rename(SLOT_LOOP, "loop");
+    prof_rename(SLOT_WA_CLEAR, "wa_clear");
+    prof_rename(SLOT_WA_RENDER, "wa_render");
+
     RGBA g = {.ptr = {127, 127, 127, 255}};
 
     float fov = 60.0f;
@@ -67,6 +71,8 @@ int main() {
     float elapsed = 0;
     clock_t t = clock();
     while (!exit_request) {
+        prof_kick(SLOT_LOOP);
+
         clock_t tf = clock();
         elapsed += (float)(tf - t) / (float)CLOCKS_PER_SEC;
         t = tf;
@@ -82,6 +88,9 @@ int main() {
         wa_render(m, v, p, vs, cs, ts, vertex_sh, fragment_sh);
 
         wa_swap_bufs();
+
+        prof_stop(SLOT_LOOP);
+        prof_dump();
     }
 
     sceKernelExitGame();

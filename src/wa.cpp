@@ -43,6 +43,8 @@ i32 wa_clear(RGBA color) {
 #define CLEAR_MAT 0
 #define CLEAR_ROW 0
 
+    prof_kick(SLOT_WA_CLEAR);
+
     RGBA *ptr = draw_buf;
     const RGBA *END = ptr + FRAME_BUF_SIZE;
 
@@ -57,6 +59,8 @@ i32 wa_clear(RGBA color) {
         VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_ROW, ptr, 32);
         VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_ROW, ptr, 48);
     }
+
+    prof_stop(SLOT_WA_CLEAR);
 
     return 1;
 
@@ -169,6 +173,8 @@ void wa_render(                                      //
     Buf<V3f> vs, Buf<RGBA> cs, Buf<V3i> ts,          //
     VertexSh_fp vertex_sh, FragmentSh_fp fragment_sh //
 ) {
+    prof_kick(SLOT_WA_RENDER);
+
     M3f w = wa_viewport();
     VFPU_ALIGNED M4f mv = v * m;
     VFPU_ALIGNED M4f mvp = p * mv;
@@ -210,14 +216,6 @@ void wa_render(                                      //
         xf = min(xf, VIEWPORT_RIGHT);
         y0 = max(y0, VIEWPORT_TOP);
         yf = min(yf, VIEWPORT_BOTTOM);
-
-#if 1
-        V3f *_s = screen;
-        RGBA _b = {.rgba = 0xFFFFFFFF};
-        wa_draw_line(_s[0].x(), _s[0].y(), _s[1].x(), _s[1].y(), _b, _b);
-        wa_draw_line(_s[1].x(), _s[1].y(), _s[2].x(), _s[2].y(), _b, _b);
-        wa_draw_line(_s[2].x(), _s[2].y(), _s[0].x(), _s[0].y(), _b, _b);
-#endif
 
         for (float y = y0; y <= yf; ++y) {
             for (float x = x0; x <= xf; ++x) {
@@ -273,6 +271,8 @@ void wa_render(                                      //
             }
         }
     }
+
+    prof_stop(SLOT_WA_RENDER);
 }
 
 float wa_fline(float x, float y, float px, float py, float qx, float qy) {

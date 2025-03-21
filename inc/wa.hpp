@@ -23,6 +23,12 @@
 #define VERTEX_SH_STUB(NAME) VertexShOut NAME(const VertexShIn *in)
 #define FRAGMENT_SH_STUB(NAME) FragmentShOut NAME(const FragmentShIn *in)
 
+enum ProfSlots {
+    SLOT_LOOP,
+    SLOT_WA_CLEAR,
+    SLOT_WA_RENDER,
+};
+
 struct VertexShIn {
     V3f vertex;
     RGBA color;
