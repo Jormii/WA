@@ -2,7 +2,10 @@
 #include <stdlib.h>
 #include <time.h>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
 #include <pspkernel.h>
+#pragma GCC diagnostic pop
 
 #include "vfpu.hpp"
 #include "wa.hpp"

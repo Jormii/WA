@@ -1,6 +1,9 @@
 #include <stdio.h>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
 #include <pspkernel.h>
+#pragma GCC diagnostic pop
 
 #include "c.h"
 
@@ -24,7 +27,9 @@ void must_cb(const char *expr, const char *file, i32 line) {
 
 // See c.h::ASSERTZ
 void assert_cb(const char *expr, const char *file, i32 line) {
+#ifndef TEST
     __builtin_trap();
+#endif
     __printf("ASSERT", expr, file, line);
 }
 
