@@ -12,22 +12,11 @@ static const auto PIXEL_FMT = PSP_DISPLAY_PIXEL_FORMAT_8888;
 static i32 initialized = 0;
 static struct pspvfpu_context *vfpu_context = NULL;
 
-// NOTE: Allows for arbitrary addresses
-// TODO: Is it worth it?
-static RGBA *bufs = NULL;
-static RGBA *draw_buf = NULL;
-static RGBA *display_buf = NULL;
+static RGBA *draw_buf = (RGBA *)DRAW_BUF_ADDR;
+static RGBA *display_buf = (RGBA *)DISPLAY_BUF_ADDR;
 
 i32 wa_init() {
     ASSERTZ(!initialized);
-
-    bufs = (RGBA *)malloc(2 * FRAME_BUF_SIZE * sizeof(RGBA));
-    ASSERTZ(bufs != NULL);
-
-    draw_buf = bufs;
-    display_buf = bufs + FRAME_BUF_SIZE;
-    ASSERTZ(draw_buf != NULL);
-    ASSERTZ(display_buf != NULL);
 
     vfpu_context = pspvfpu_initcontext();
     ASSERTZ(vfpu_context != NULL);
