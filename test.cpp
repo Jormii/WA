@@ -90,12 +90,13 @@ extern i32 VFPU_ASSERT_ptr_is_NULL_test(void);
 extern i32 VFPU_ALIGNED_ASSERT_test(void);
 extern i32 VFPU_LOAD_V4_ROW__and__VFPU_STORE_V4_ROW_test(void);
 extern i32 VFPU_LOAD_M4__and__VFPU_STORE_M4_test(void);
-extern i32 mmult_m__float_4_test(void);
+extern i32 Mat_operator_mult_Mat__4_float_test(void);
+extern i32 mmult_m__4_float_test(void);
 extern i32 __VFPU_deinit_test(void);
 
 int main(void) {
 	i32 passed = 0;
-	const i32 N_TESTS = 68;
+	const i32 N_TESTS = 69;
 
 	testing_started_cb();
 
@@ -170,7 +171,8 @@ int main(void) {
 	passed += test_function_cb(VFPU_ALIGNED_ASSERT_test, "VFPU_ALIGNED_ASSERT_test");
 	passed += test_function_cb(VFPU_LOAD_V4_ROW__and__VFPU_STORE_V4_ROW_test, "VFPU_LOAD_V4_ROW__and__VFPU_STORE_V4_ROW_test");
 	passed += test_function_cb(VFPU_LOAD_M4__and__VFPU_STORE_M4_test, "VFPU_LOAD_M4__and__VFPU_STORE_M4_test");
-	passed += test_function_cb(mmult_m__float_4_test, "mmult_m__float_4_test");
+	passed += test_function_cb(Mat_operator_mult_Mat__4_float_test, "Mat_operator_mult_Mat__4_float_test");
+	passed += test_function_cb(mmult_m__4_float_test, "mmult_m__4_float_test");
 	passed += test_function_cb(__VFPU_deinit_test, "__VFPU_deinit_test");
 
 	testing_finished_cb(passed, N_TESTS - passed);

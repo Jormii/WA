@@ -83,7 +83,35 @@ i32 VFPU_LOAD_M4__and__VFPU_STORE_M4_test(void) {
 #undef MAT
 }
 
-i32 mmult_m__float_4_test(void) {
+// cpp.hpp::Mat
+i32 Mat_operator_mult_Mat__4_float_test(void) {
+    VFPU_ALIGNED Mat<4, float> m = {
+        2, 3, 4, 5, //
+        3, 4, 5, 6, //
+        4, 5, 6, 7, //
+        5, 6, 7, 8, //
+    };
+    VFPU_ALIGNED Mat<4, float> a = {
+        1, 2, 3, 4, //
+        4, 3, 2, 1, //
+        6, 7, 8, 9, //
+        9, 8, 7, 6, //
+    };
+    VFPU_ALIGNED Mat<4, float> expected_mmult = {
+        83,  81,  79,  77,  //
+        103, 101, 99,  97,  //
+        123, 121, 119, 117, //
+        143, 141, 139, 137, //
+    };
+
+    Mat<4, float> mmult = m * a;
+    ASSERTZ(mmult == expected_mmult);
+
+    return 1;
+}
+
+// cpp.hpp::(Functions)
+i32 mmult_m__4_float_test(void) {
     VFPU_ALIGNED float m[4 * 4] = {
         2, 3, 4, 5, //
         3, 4, 5, 6, //

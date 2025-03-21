@@ -2,6 +2,8 @@
 
 #include "cpp.hpp"
 
+#pragma region macro
+
 #define VFPU_ALIGNED __attribute__((aligned(16)))
 
 #define VFPU_V4 "q"
@@ -67,6 +69,32 @@
     VFPU_INST_BINARY(VFPU_OP_MMULT_M, VFPU_V4, VFPU_M(DST_MAT), VFPU_M(SRC2_MAT), VFPU_M(SRC1_MAT))
 // clang-format on
 
+#pragma endregion
+
+#pragma region function
+
+// clang-format off
+template <>
+[[nodiscard]] float *mmult_m<4, float>(const float *m, const float *a, float *out);
+// clang-format on
+
+#pragma endregion
+
+#pragma region template implementation
+
+template <>
+inline Mat<4, float> Mat<4, float>::operator*(const Mat &rhs) const {
+    TESTED();
+
+    VFPU_ALIGNED Mat<4, float> mmult;
+    const float *out = mmult_m<4, float>(ptr, rhs.ptr, mmult.ptr);
+    if (out != NULL) {
+        return mmult;
+    } else {
+        return Mat<4, float>::zeros();
+    }
+}
+
 template <>
 inline float *mmult_m<4, float>(const float *m, const float *a, float *out) {
 #define M_MAT 0
@@ -89,3 +117,5 @@ inline float *mmult_m<4, float>(const float *m, const float *a, float *out) {
 #undef A_MAT
 #undef OUT_MAT
 }
+
+#pragma endregion
