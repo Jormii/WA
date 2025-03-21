@@ -4,6 +4,7 @@
 
 #include <pspkernel.h>
 
+#include "vfpu.hpp"
 #include "wa.hpp"
 
 enum ExitCode {
@@ -47,8 +48,8 @@ int main() {
         {1, 2, 3},
     };
 
-    M4f m = M4f::I();
-    M4f p = wa_perspective_fov((fov * M_PI) / 180.0f, n, f);
+    VFPU_ALIGNED M4f m = M4f::I();
+    VFPU_ALIGNED M4f p = wa_perspective_fov((fov * M_PI) / 180.0f, n, f);
 
     Buf<V3f> vs = BUF_FROM_C_ARR(vs_);
     Buf<RGBA> cs = BUF_FROM_C_ARR(cs_);
@@ -73,7 +74,7 @@ int main() {
         eye.x() = 5 * cosf(elapsed);
         eye.y() = 5 * sinf(elapsed + M_PI);
         eye.z() = -(5 * sinf(elapsed));
-        M4f v = wa_look_at(eye, at, up);
+        VFPU_ALIGNED M4f v = wa_look_at(eye, at, up);
 
         wa_render(m, v, p, vs, cs, ts, vertex_sh, fragment_sh);
 

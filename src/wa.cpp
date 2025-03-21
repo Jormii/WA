@@ -112,8 +112,8 @@ M4f wa_look_at(V3f eye, V3f at, V3f up) {
     y = y.norm();
     z = z.norm();
 
-    M4f r = rotation_m(x, y, z);
-    M4f t = translation_m(-eye);
+    VFPU_ALIGNED M4f r = rotation_m(x, y, z);
+    VFPU_ALIGNED M4f t = translation_m(-eye);
     M4f look_at = r * t;
 
     return look_at;
@@ -170,8 +170,8 @@ void wa_render(                                      //
     VertexSh_fp vertex_sh, FragmentSh_fp fragment_sh //
 ) {
     M3f w = wa_viewport();
-    M4f mv = v * m;
-    M4f mvp = p * mv;
+    VFPU_ALIGNED M4f mv = v * m;
+    VFPU_ALIGNED M4f mvp = p * mv;
 
     for (i32 i = 0; i < ts.len; ++i) {
         V3f screen[3];
