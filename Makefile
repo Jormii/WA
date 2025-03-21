@@ -21,7 +21,8 @@ BUILDS = TEST DEBUG RELEASE
 ifeq ($(BUILD), TEST)
 OBJS := $(MAIN_TEST) $(OBJS) $(OBJS_TEST)
 else ifeq ($(BUILD), DEBUG)
-OBJS := $(MAIN) $(OBJS) 
+OBJS := $(MAIN) $(OBJS)
+CFLAGS := $(CFLAGS) -g3
 else ifeq ($(BUILD), RELEASE)
 OBJS := $(MAIN) $(OBJS)
 CFLAGS := -D NDEBUG
