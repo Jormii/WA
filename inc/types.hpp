@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cmath> // TODO (Jorge): Remove
+#include <math.h> // TODO: Remove
 
 #include "cpp.hpp"
 
@@ -9,11 +9,15 @@
 union RGBA {
     u8 ptr[4];
     u32 rgba;
+    u32 rgbz;
     V4<u8> v;
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
     struct {
-        u8 r, g, b, a;
+        u8 r, g, b;
+        union {
+            u8 a, z;
+        };
     };
 #pragma GCC diagnostic pop
 
@@ -48,25 +52,28 @@ M4<T> translation_xyz_m(const T &x, const T &y, const T &z);
 
 template <typename T>
 V3f persp_div(const V4<T> &u) {
+    UNTESTED("V3f persp_div(const V4<T> &u)");
+
     T w = u.w();
-    if (!eq(w, (T)0)) {
-        return u.xyz() / (float)w;
-    } else {
-        return u.xyz().template cast<float>(); // BRUH
-    }
+    MUST(!eq(w, (T)0));
+
+    V3f persp_div_ = u.xyz() / (float)w;
+    return persp_div_;
 }
 
 template <typename T>
 M4<T> rotation_m(const V3<T> &x, const V3<T> &y, const V3<T> &z) {
+    UNTESTED("M4<T> rotation_m(...)");
+
 #ifndef NDEBUG
     const V3f axes[3] = {x, y, z};
     for (i32 i = 0; i < 3; ++i) {
         float dot = V3<T>::dot(axes[i], axes[(i + 1) % 3]);
 
-        i32 orthogonal = eq(dot, 0.0f);
         i32 unit = eq(axes[i].mag(), 1.0f);
-        MUST(orthogonal);
+        i32 orthogonal = eq(dot, 0.0f);
         MUST(unit);
+        MUST(orthogonal);
     }
 #endif
 
@@ -87,6 +94,8 @@ M4<T> translation_m(const V3<T> &p) {
 
 template <typename T>
 M4<T> translation_xyz_m(const T &x, const T &y, const T &z) {
+    UNTESTED("M4<T> translation_xyz_m(const T &x, const T &y, const T &z)");
+
     M4<T> translation = {
         1, 0, 0, x, //
         0, 1, 0, y, //
