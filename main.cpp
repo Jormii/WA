@@ -66,7 +66,7 @@ int main() {
 
     setup_callbacks();
     i32 ok = wa_init();
-    ASSERTC(ok, ExitCode::INIT_ERR);
+    ASSERTV(ok, ExitCode::INIT_ERR);
 
     float elapsed = 0;
     clock_t t = clock();
@@ -77,8 +77,7 @@ int main() {
         elapsed += (float)(tf - t) / (float)CLOCKS_PER_SEC;
         t = tf;
 
-        i32 ok = wa_clear(g);
-        ASSERTC(ok, ExitCode::CLEAR_ERR);
+        wa_clear(g);
 
         eye.x() = 5 * cosf(elapsed);
         eye.y() = 5 * sinf(elapsed + M_PI);
