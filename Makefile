@@ -21,13 +21,13 @@ LDFLAGS =
 BUILDS = TEST DEBUG RELEASE
 ifeq ($(BUILD), TEST)
 OBJS := $(MAIN_TEST) $(OBJS) $(OBJS_TEST)
-CFLAGS := $(CFLAGS) -g3 -D TEST
+CFLAGS := $(CFLAGS) -g3
 else ifeq ($(BUILD), DEBUG)
 OBJS := $(MAIN) $(OBJS)
 CFLAGS := $(CFLAGS) -g3
 else ifeq ($(BUILD), RELEASE)
 OBJS := $(MAIN) $(OBJS)
-CFLAGS := -D NDEBUG
+CFLAGS := -O2 -D NDEBUG
 else
 $(error Unsupported BUILD=$(BUILD). Allowed: $(BUILDS))
 endif
