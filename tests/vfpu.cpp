@@ -13,35 +13,6 @@ i32 __VFPU_init_test(void) {
     return 1;
 }
 
-// vfpu.hpp::VFPU_ASSERT
-i32 __VFPU_ASSERT_call(const i32 *ptr) {
-    VFPU_ASSERT(ptr, 0);
-    return 1;
-}
-
-i32 VFPU_ASSERT_ptr_is_NULL_test(void) {
-    ASSERTZ(__VFPU_ASSERT_call(NULL) == 0);
-    return 1;
-}
-
-// vfpu.hpp::VFPU_ALIGNED_ASSERT
-i32 __VFPU_ALIGNED_ASSERT_call(const i32 *ptr) {
-    VFPU_ALIGNED_ASSERT(ptr, 0);
-    return 1;
-}
-
-i32 VFPU_ALIGNED_ASSERT_test(void) {
-    VFPU_ALIGNED i32 u[4] = {2, 3, 4, 5};
-
-    ASSERTZ(__VFPU_ALIGNED_ASSERT_call(u + 0) == 1);
-    ASSERTZ(__VFPU_ALIGNED_ASSERT_call(u + 1) == 0);
-    ASSERTZ(__VFPU_ALIGNED_ASSERT_call(u + 2) == 0);
-    ASSERTZ(__VFPU_ALIGNED_ASSERT_call(u + 3) == 0);
-    ASSERTZ(__VFPU_ALIGNED_ASSERT_call(u + 4) == 1);
-
-    return 1;
-}
-
 // vfpu.hpp::VFPU_LOAD_V4_ROW
 // vfpu.hpp::VFPU_STORE_V4_ROW
 i32 VFPU_LOAD_V4_ROW__and__VFPU_STORE_V4_ROW_test(void) {
@@ -111,6 +82,28 @@ i32 Mat_operator_mult_Mat__4_float_test(void) {
 }
 
 // cpp.hpp::(Functions)
+i32 vfpu_check_test(void) {
+    i32 val = 0;
+    i32 offset = 0;
+    ASSERTZ(vfpu_check(NULL, offset) == 0);
+    ASSERTZ(c_arr_check(&val, offset) == 1);
+
+    return 1;
+}
+
+i32 vfpu_aligned_check_test(void) {
+    i32 offset = 0;
+    VFPU_ALIGNED i32 u[4] = {2, 3, 4, 5};
+
+    ASSERTZ(vfpu_aligned_check(u + 0, offset) == 1);
+    ASSERTZ(vfpu_aligned_check(u + 1, offset) == 0);
+    ASSERTZ(vfpu_aligned_check(u + 2, offset) == 0);
+    ASSERTZ(vfpu_aligned_check(u + 3, offset) == 0);
+    ASSERTZ(vfpu_aligned_check(u + 4, offset) == 1);
+
+    return 1;
+}
+
 i32 mmult_m__4_float_test(void) {
     VFPU_ALIGNED float m[4 * 4] = {
         2, 3, 4, 5, //
@@ -132,8 +125,7 @@ i32 mmult_m__4_float_test(void) {
     };
 
     VFPU_ALIGNED float mmult[C_ARR_LEN(m)];
-    const float *out = mmult_m<4, float>(m, a, mmult);
-    ASSERTZ(out == mmult);
+    mmult_m<4, float>(m, a, mmult);
     ASSERTZ(eq_v(mmult, expected_mmult, C_ARR_LEN(m)));
 
     return 1;
