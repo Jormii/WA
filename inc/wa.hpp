@@ -15,10 +15,10 @@
 #define VIEWPORT_TOP -0.5f
 #define VIEWPORT_BOTTOM (SCREEN_HEIGHT - 1 - 0.5f)
 
-#define Z_BUF_MAX -1.0f
-#define Z_BUF_CLEAR 1.0f
-#define ALPHA_MAX 0
-#define ALPHA_CLEAR 255
+#define CANONICAL_Z_MAX -1.0f
+#define CANONICAL_Z_CLEAR 1.0f
+#define RGBA_Z_MAX 0
+#define RGBA_Z_CLEAR 255
 
 #define VERTEX_SH_STUB(NAME) VertexShOut NAME(const VertexShIn *in)
 #define FRAGMENT_SH_STUB(NAME) FragmentShOut NAME(const FragmentShIn *in)
@@ -30,8 +30,8 @@ enum ProfSlots {
 };
 
 struct VertexShIn {
-    V3f vertex;
-    RGBA color;
+    const V3f &vertex;
+    const RGBA &color;
 
     const M4f &mvp;
 };
@@ -42,7 +42,7 @@ struct VertexShOut {
 };
 
 struct FragmentShIn {
-    RGBA color;
+    const RGBA &color;
 };
 
 struct FragmentShOut {
@@ -53,10 +53,10 @@ typedef VertexShOut (*VertexSh_fp)(const VertexShIn &in);
 typedef FragmentShOut (*FragmentSh_fp)(const FragmentShIn &in);
 
 [[nodiscard]] i32 wa_init();
-[[nodiscard]] i32 wa_clear(RGBA color);
+void wa_clear(RGBA color);
 void wa_swap_bufs();
 
-i32 wa_buf_in(float x, float y);
+[[nodiscard]] i32 wa_buf_in(float x, float y);
 i32 wa_buf_idx(float x, float y);
 
 V3f wa_up();
