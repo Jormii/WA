@@ -10,12 +10,6 @@
 #include "vfpu.hpp"
 #include "wa.hpp"
 
-enum ExitCode {
-    OK,
-    INIT_ERR,
-    CLEAR_ERR,
-};
-
 i32 exit_request = 0;
 
 SceUID setup_callbacks();
@@ -66,7 +60,9 @@ int main() {
 
     setup_callbacks();
     i32 ok = wa_init();
-    ASSERTV(ok, ExitCode::INIT_ERR);
+    if (!ok) {
+        return 1;
+    }
 
     float elapsed = 0;
     clock_t t = clock();
@@ -93,7 +89,7 @@ int main() {
     }
 
     sceKernelExitGame();
-    return ExitCode::OK;
+    return 0;
 }
 
 SceUID setup_callbacks() {

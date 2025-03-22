@@ -20,17 +20,16 @@ void __printf(const char *what, const char *expr, const char *file, i32 line) {
 
 // See c.h::MUST
 void must_cb(const char *expr, const char *file, i32 line) {
-    __builtin_trap();
     __printf("MUST", expr, file, line);
+    __builtin_trap();
+
     sceKernelExitGame();
 }
 
 // See c.h::ASSERTZ
 void assert_cb(const char *expr, const char *file, i32 line) {
-#ifndef TEST
-    __builtin_trap();
-#endif
     __printf("ASSERT", expr, file, line);
+    __builtin_trap();
 }
 
 // See compile_tests.py

@@ -27,7 +27,7 @@ OBJS := $(MAIN) $(OBJS)
 CFLAGS := $(CFLAGS) -g3
 else ifeq ($(BUILD), RELEASE)
 OBJS := $(MAIN) $(OBJS)
-CFLAGS := -O2 -D NDEBUG
+CFLAGS := $(CFLAGS) -O2 -D NDEBUG
 else
 $(error Unsupported BUILD=$(BUILD). Allowed: $(BUILDS))
 endif
