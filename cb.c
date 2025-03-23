@@ -21,7 +21,9 @@ void __printf(const char *what, const char *expr, const char *file, i32 line) {
 // See c.h::MUST
 void must_cb(const char *expr, const char *file, i32 line) {
     __printf("MUST", expr, file, line);
+#ifdef DEBUGGER
     __builtin_trap();
+#endif
 
     sceKernelExitGame();
 }
@@ -29,7 +31,9 @@ void must_cb(const char *expr, const char *file, i32 line) {
 // See c.h::ASSERTZ
 void assert_cb(const char *expr, const char *file, i32 line) {
     __printf("ASSERT", expr, file, line);
+#ifdef DEBUGGER
     __builtin_trap();
+#endif
 }
 
 // See compile_tests.py

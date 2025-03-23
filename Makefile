@@ -21,15 +21,24 @@ LDFLAGS =
 BUILDS = TEST DEBUG RELEASE
 ifeq ($(BUILD), TEST)
 OBJS := $(MAIN_TEST) $(OBJS) $(OBJS_TEST)
-CFLAGS := $(CFLAGS) -g3
+CFLAGS := $(CFLAGS)
 else ifeq ($(BUILD), DEBUG)
 OBJS := $(MAIN) $(OBJS)
-CFLAGS := $(CFLAGS) -g3
+CFLAGS := $(CFLAGS)
 else ifeq ($(BUILD), RELEASE)
 OBJS := $(MAIN) $(OBJS)
 CFLAGS := $(CFLAGS) -O2 -D NDEBUG
 else
 $(error Unsupported BUILD=$(BUILD). Allowed: $(BUILDS))
+endif
+
+DEBUGGERS = 0 1
+ifeq ($(DEBUGGER), 0)
+CFLAGS := $(CFLAGS)
+else ifeq ($(DEBUGGER), 1)
+CFLAGS := $(CFLAGS) -g3 -D DEBUGGER
+else
+$(error Unsupported DEBUGGER=$(DEBUGGER). Allowed: $(DEBUGGERS))
 endif
 
 BUILD_PRX = 1
