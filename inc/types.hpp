@@ -35,6 +35,12 @@ static_assert(sizeof(RGBA) == sizeof(u32));
 #pragma region function
 
 template <typename T>
+V4<T> v4_point(const V3<T> &u);
+
+template <typename T>
+V4<T> v4_vector(const V3<T> &u);
+
+template <typename T>
 V3f persp_div(const V4<T> &u);
 
 template <typename T>
@@ -49,6 +55,18 @@ M4<T> translation_xyz_m(const T &x, const T &y, const T &z);
 #pragma endregion
 
 #pragma region template implementation
+
+template <typename T>
+V4<T> v4_point(const V3<T> &u) {
+    UNTESTED("V4<T> v4_point(const V3<T> &u)");
+    return {u.x(), u.y(), u.z(), (T)1};
+}
+
+template <typename T>
+V4<T> v4_vector(const V3<T> &u) {
+    UNTESTED("V4<T> v4_vector(const V3<T> &u)");
+    return {u.x(), u.y(), u.z(), (T)0};
+}
 
 template <typename T>
 V3f persp_div(const V4<T> &u) {
