@@ -20,7 +20,7 @@
 #define VFPU_OP_MMULT_M "vmmul"
 
 #define VFPU_INST_MEMORY(OP_CODE, DIM, REG, ptr, OFFSET)                       \
-    MUST(vfpu_check(ptr, OFFSET));                                             \
+    MUST(vfpu_check(ptr));                                                     \
     asm(OP_CODE "." DIM " " REG ", " #OFFSET "(%0)" : : "r"(ptr) : "memory");
 
 #define VFPU_INST_BINARY(OP_CODE, SIZE, DST, SRC1, SRC2)                       \
@@ -56,7 +56,7 @@
 
 #pragma region function
 
-[[nodiscard]] i32 vfpu_check(const void *ptr, i32 offset);
+[[nodiscard]] i32 vfpu_check(const void *ptr);
 [[nodiscard]] i32 vfpu_aligned_check(const void *ptr, i32 offset);
 
 template <>

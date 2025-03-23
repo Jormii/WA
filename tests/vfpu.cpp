@@ -84,9 +84,8 @@ i32 Mat_operator_mult_Mat__4_float_test(void) {
 // cpp.hpp::(Functions)
 i32 vfpu_check_test(void) {
     i32 val = 0;
-    i32 offset = 0;
-    ASSERTZ(vfpu_check(NULL, offset) == 0);
-    ASSERTZ(c_arr_check(&val, offset) == 1);
+    ASSERTZ(vfpu_check(NULL) == 0);
+    ASSERTZ(vfpu_check(&val) == 1);
 
     return 1;
 }
