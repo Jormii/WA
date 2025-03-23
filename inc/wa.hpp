@@ -29,11 +29,42 @@ enum ProfSlots {
     SLOT_WA_RENDER,
 };
 
-struct VertexShIn {
-    const V3f &vertex;
-    const RGBA &color;
+enum class VAOType {
+    V3f,
+    M4f,
+    RGBA,
+};
 
-    const M4f &mvp;
+struct VAOUnif {
+    i32 ptr_idx;
+    VAOType type;
+};
+
+struct VAOAttr {
+    i32 ptr_idx;
+    i32 offset;
+    i32 stride;
+    VAOType type;
+};
+
+struct VAO {
+    const u8 *bptr;
+    Buf<void *> ptrs;
+    Buf<VAOUnif> unifs;
+    Buf<VAOAttr> attrs;
+
+    void ptr(i32 ptr_idx, void *ptr);
+    void unif(i32 ptr_idx, i32 unif_idx, VAOType type);
+    void attr(i32 ptr_idx, i32 attr_idx, i32 offset, i32 stride, VAOType type);
+
+    const M4f &unif_m4f(i32 unif_idx) const;
+    const void *__get_unif(i32 unif_idx, VAOType type) const;
+
+    const V3f &attr_v3f(i32 attr_idx, i32 vertex_idx) const;
+    const RGBA &attr_rgba(i32 attr_idx, i32 vertex_idx) const;
+    const void *__get_attr(i32 attr_idx, i32 vertex_idx, VAOType type) const;
+
+    static VAO alloc(i32 n_ptrs, i32 n_unifs, i32 n_attrs);
 };
 
 struct VertexShOut {

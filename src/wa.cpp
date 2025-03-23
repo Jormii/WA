@@ -1,3 +1,5 @@
+#include <stdlib.h>
+
 #include <pspdisplay.h>
 #include <pspgu.h>
 #include <pspgum.h>
@@ -14,6 +16,117 @@ static struct pspvfpu_context *vfpu_context = NULL;
 
 static RGBA *draw_buf = (RGBA *)DRAW_BUF_ADDR;
 static RGBA *display_buf = (RGBA *)DISPLAY_BUF_ADDR;
+
+void VAO::ptr(i32 ptr_idx, void *ptr) {
+    MUST(c_arr_idx_check(ptrs.ptr, ptrs.len, ptr_idx));
+    MUST(ptr != NULL);
+
+    ptrs[ptr_idx] = ptr;
+}
+
+void VAO::unif(i32 ptr_idx, i32 unif_idx, VAOType type) {
+    MUST(c_arr_idx_check(ptrs.ptr, ptrs.len, ptr_idx));
+    MUST(c_arr_idx_check(unifs.ptr, unifs.len, unif_idx));
+
+    VAOUnif *unif = unifs + unif_idx;
+    unif->ptr_idx = ptr_idx;
+    unif->type = type;
+}
+
+void VAO::attr(                                                     //
+    i32 ptr_idx, i32 attr_idx, i32 offset, i32 stride, VAOType type //
+) {
+    MUST(c_arr_idx_check(ptrs.ptr, ptrs.len, ptr_idx));
+    MUST(c_arr_idx_check(attrs.ptr, attrs.len, attr_idx));
+    MUST(offset >= 0);
+    MUST(stride >= 0);
+
+    VAOAttr *attr = attrs + attr_idx;
+    attr->ptr_idx = ptr_idx;
+    attr->offset = offset;
+    attr->stride = stride;
+    attr->type = type;
+}
+
+#define __UNIF_GET(RET_T, idx) *(RET_T *)(__get_unif(idx, VAOType::RET_T))
+
+const M4f &VAO::unif_m4f(i32 unif_idx) const {
+    return __UNIF_GET(M4f, unif_idx);
+}
+
+#undef __UNIF_GET
+
+const void *VAO::__get_unif(i32 unif_idx, VAOType type) const {
+    MUST(c_arr_idx_check(unifs.ptr, unifs.len, unif_idx));
+
+    const VAOUnif *unif = unifs + unif_idx;
+    i32 ptr_idx = unif->ptr_idx;
+
+    MUST(c_arr_idx_check(ptrs.ptr, ptrs.len, ptr_idx))
+    MUST(type == unif->type);
+
+    const void *ptr = ptrs[ptr_idx];
+    MUST(ptr != NULL);
+
+    return ptr;
+}
+
+#define __ATTR_GET(RET_T, idx, v_idx)                                          \
+    *(RET_T *)(__get_attr(idx, v_idx, VAOType::RET_T))
+
+const V3f &VAO::attr_v3f(i32 attr_idx, i32 vertex_idx) const {
+    return __ATTR_GET(V3f, attr_idx, vertex_idx);
+}
+
+const RGBA &VAO::attr_rgba(i32 attr_idx, i32 vertex_idx) const {
+    return __ATTR_GET(RGBA, attr_idx, vertex_idx);
+}
+
+#undef __ATTR_GET
+
+const void *VAO::__get_attr(i32 attr_idx, i32 vertex_idx, VAOType type) const {
+    MUST(c_arr_idx_check(attrs.ptr, attrs.len, attr_idx));
+
+    const VAOAttr *attr = attrs + attr_idx;
+    i32 ptr_idx = attr->ptr_idx;
+    i32 offset = attr->offset;
+    i32 stride = attr->stride;
+
+    MUST(c_arr_idx_check(ptrs.ptr, ptrs.len, ptr_idx));
+    MUST(offset >= 0);
+    MUST(stride >= 0);
+    MUST(type == attr->type);
+
+    const void *ptr = ptrs[ptr_idx];
+    MUST(ptr != NULL);
+
+    const u8 *out_ptr = ((u8 *)(ptr) + vertex_idx * stride) + offset;
+    return out_ptr;
+}
+
+VAO VAO::alloc(i32 n_ptrs, i32 n_unifs, i32 n_attrs) {
+    MUST(n_ptrs >= 0);
+    MUST(n_unifs >= 0);
+    MUST(n_attrs >= 0);
+
+    i32 ptrs_size = n_ptrs * sizeof(void *);
+    i32 unifs_size = n_unifs * sizeof(VAOUnif);
+    i32 attrs_size = n_attrs * sizeof(VAOAttr);
+
+    i32 size = ptrs_size + unifs_size + attrs_size;
+    u8 *bptr = (u8 *)malloc(size); // TODO: Custom malloc()
+    MUST(bptr != NULL);
+
+    u8 *ptrs_ptr = bptr;
+    u8 *unifs_ptr = ptrs_ptr + ptrs_size;
+    u8 *attrs_ptr = unifs_ptr + unifs_size;
+
+    Buf<void *> ptrs = {(void **)ptrs_ptr, n_ptrs};
+    Buf<VAOUnif> unifs = {(VAOUnif *)unifs_ptr, n_unifs};
+    Buf<VAOAttr> attrs = {(VAOAttr *)attrs_ptr, n_attrs};
+
+    return {bptr, ptrs, unifs, attrs};
+}
 
 i32 wa_init() {
     UNTESTED("i32 wa_init()");
