@@ -20,9 +20,6 @@
 #define RGBA_Z_MAX 0
 #define RGBA_Z_CLEAR 255
 
-#define VERTEX_SH_STUB(NAME) VertexShOut NAME(const VertexShIn *in)
-#define FRAGMENT_SH_STUB(NAME) FragmentShOut NAME(const FragmentShIn *in)
-
 enum ProfSlots {
     SLOT_LOOP,
     SLOT_WA_CLEAR,
@@ -68,20 +65,16 @@ struct VAO {
 };
 
 struct VertexShOut {
-    V4f position;
+    V4f vertex;
     RGBA color;
-};
-
-struct FragmentShIn {
-    const RGBA &color;
 };
 
 struct FragmentShOut {
     RGBA color;
 };
 
-typedef VertexShOut (*VertexSh_fp)(const VertexShIn &in);
-typedef FragmentShOut (*FragmentSh_fp)(const FragmentShIn &in);
+typedef VertexShOut (*VertexSh_fp)(i32 vertex_idx, const VAO &vao);
+typedef FragmentShOut (*FragmentSh_fp)(const RGBA &color);
 
 [[nodiscard]] i32 wa_init();
 void wa_clear(RGBA color);
@@ -98,14 +91,10 @@ M4f wa_perspective(float l, float r, float b, float t, float n, float f);
 M4f wa_perspective_fov(float fov, float n, float f);
 
 void wa_render(                                      //
-    const M4f &m, const M4f &v, const M4f &p,        //
-    Buf<V3f> vs, Buf<RGBA> cs, Buf<V3i> ts,          //
+    const VAO &vao, const Buf<V3i> triangles,        //
     VertexSh_fp vertex_sh, FragmentSh_fp fragment_sh //
 );
 
 float wa_fline(float x, float y, float px, float py, float qx, float qy);
 
 void wa_draw_line(float x0, float y0, float xf, float yf, RGBA c0, RGBA cf);
-
-VertexShOut wa_vertex_sh_basic(const VertexShIn &in);
-FragmentShOut wa_fragment_sh_basic(const FragmentShIn &in);

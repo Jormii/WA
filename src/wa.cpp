@@ -290,44 +290,30 @@ M4f wa_perspective_fov(float fov, float n, float f) {
 }
 
 void wa_render(                                      //
-    const M4f &m, const M4f &v, const M4f &p,        //
-    Buf<V3f> vs, Buf<RGBA> cs, Buf<V3i> ts,          //
+    const VAO &vao, const Buf<V3i> triangles,        //
     VertexSh_fp vertex_sh, FragmentSh_fp fragment_sh //
 ) {
     UNTESTED("void wa_render()")
 
-    MUST(vs.len == cs.len);
-    for (i32 i = 0; i < ts.len; ++i) {
-        const V3i &tri = ts[i];
-        for (i32 j = 0; j < tri.len(); ++j) {
-            MUST(tri[j] < vs.len);
-        }
-    }
     MUST(vertex_sh != NULL);
     MUST(fragment_sh != NULL);
 
     prof_kick(SLOT_WA_RENDER);
 
     M3f w = wa_viewport();
-    VFPU_ALIGNED M4f mv = v * m;
-    VFPU_ALIGNED M4f mvp = p * mv;
 
-    for (i32 i = 0; i < ts.len; ++i) {
+    for (i32 i = 0; i < triangles.len; ++i) {
         V3f screen[3];
         RGBA screen_colors[3];
-        const V3i &triangle = ts[i];
+        const V3i &triangle = triangles[i];
 
-        for (i32 j = 0; j < 3; ++j) {
+        for (i32 j = 0; j < triangle.len(); ++j) {
             i32 vertex_idx = triangle[j];
+            VertexShOut out = vertex_sh(vertex_idx, vao);
 
-            const V3f &vertex = vs[vertex_idx];
-            const RGBA &color = cs[vertex_idx];
-
-            VertexShIn in = {vertex, color, mvp};
-            VertexShOut out = vertex_sh(in);
-
-            V3f canonical = persp_div(out.position);
+            V3f canonical = persp_div(out.vertex);
             V3f canonical_xy = {canonical.x(), canonical.y(), 1};
+
             screen[j] = w * canonical_xy;
             screen_colors[j] = out.color;
 
@@ -396,11 +382,10 @@ void wa_render(                                      //
                         alpha, beta, gamma                                    //
                     );
 
-                    FragmentShIn in = {color};
-                    FragmentShOut out = fragment_sh(in);
+                    color.z = rgba_z;
+                    FragmentShOut out = fragment_sh(color);
 
                     color = out.color;
-                    color.z = rgba_z;
                     draw_buf[idx] = color;
                 }
             }
@@ -451,22 +436,4 @@ void wa_draw_line(float x0, float y0, float xf, float yf, RGBA c0, RGBA cf) {
             draw_buf[idx] = color;
         }
     }
-}
-
-VertexShOut wa_vertex_sh_basic(const VertexShIn &in) {
-    UNTESTED("VertexShOut wa_vertex_sh_basic(const VertexShIn &in)")
-
-    const V3f &v = in.vertex;
-    V4f position = {v.x(), v.y(), v.z(), 1.0f};
-    V4f out_position = in.mvp * position;
-
-    VertexShOut out = {out_position, in.color};
-    return out;
-}
-
-FragmentShOut wa_fragment_sh_basic(const FragmentShIn &in) {
-    UNTESTED("FragmentShOut wa_fragment_sh_basic(const FragmentShIn &in)")
-
-    FragmentShOut out = {in.color};
-    return out;
 }
