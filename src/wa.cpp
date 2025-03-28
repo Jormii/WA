@@ -16,6 +16,7 @@ static struct pspvfpu_context *vfpu_context = NULL;
 
 static RGBA *draw_buf = (RGBA *)DRAW_BUF_ADDR;
 static RGBA *display_buf = (RGBA *)DISPLAY_BUF_ADDR;
+static float *z_buf = NULL;
 
 void VAO::ptr(i32 ptr_idx, void *ptr) {
     MUST(c_arr_idx_check(ptrs.ptr, ptrs.len, ptr_idx));
@@ -132,6 +133,9 @@ i32 wa_init() {
     UNTESTED("i32 wa_init()");
     ASSERTZ(!initialized);
 
+    z_buf = (float *)malloc(FRAME_BUF_SIZE * sizeof(float));
+    ASSERTZ(z_buf != NULL);
+
     vfpu_context = pspvfpu_initcontext();
     ASSERTZ(vfpu_context != NULL);
 
@@ -144,32 +148,40 @@ i32 wa_init() {
 
 void wa_clear(RGBA color) {
 #define CLEAR_MAT 0
-#define CLEAR_ROW 0
+#define CLEAR_RGBA_ROW 0
+#define CLEAR_Z_ROW 1
 
     UNTESTED("void wa_clear(RGBA color)");
 
     prof_kick(SLOT_WA_CLEAR);
 
-    color.z = RGBA_Z_CLEAR;
+    RGBA *rgba_ptr = draw_buf;
+    float *z_ptr = z_buf;
 
-    RGBA *ptr = draw_buf;
-    const RGBA *END = ptr + FRAME_BUF_SIZE;
+    i32 c = color.rgba;
+    float z = CANONICAL_Z_CLEAR;
+    VFPU_ALIGNED i32 rgba_row[] = {c, c, c, c};
+    VFPU_ALIGNED float z_row[] = {z, z, z, z};
+    VFPU_LOAD_V4_ROW(CLEAR_MAT, CLEAR_RGBA_ROW, rgba_row, 0);
+    VFPU_LOAD_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_row, 0);
 
-    i32 c = color.rgbz;
-    VFPU_ALIGNED i32 row[] = {c, c, c, c};
-    VFPU_LOAD_V4_ROW(CLEAR_MAT, CLEAR_ROW, row, 0);
+    for (i32 _ = 0; _ < FRAME_BUF_SIZE; _ += 16, rgba_ptr += 16, z_ptr += 16) {
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_RGBA_ROW, rgba_ptr, 0);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_RGBA_ROW, rgba_ptr, 16);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_RGBA_ROW, rgba_ptr, 32);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_RGBA_ROW, rgba_ptr, 48);
 
-    for (; ptr != END; ptr += 16) {
-        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_ROW, ptr, 0);
-        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_ROW, ptr, 16);
-        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_ROW, ptr, 32);
-        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_ROW, ptr, 48);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_ptr, 0);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_ptr, 16);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_ptr, 32);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_ptr, 48);
     }
 
     prof_stop(SLOT_WA_CLEAR);
 
 #undef CLEAR_MAT
-#undef CLEAR_ROW
+#undef CLEAR_RGBA_ROW
+#undef CLEAR_Z_ROW
 }
 
 void wa_swap_bufs() {
@@ -350,7 +362,7 @@ void wa_render(                                      //
                     wa_fline(sy.x(), sy.y(), sz.x(), sz.y(), sx.x(), sx.y());
                 float gamma = 1 - (alpha + beta);
 
-                if (alpha > 0 && beta > 0 && gamma > 0) {
+                if (alpha >= 0 && beta >= 0 && gamma >= 0) {
                     i32 idx = wa_buf_idx(x, y);
 
                     float z = CANONICAL_Z_CLEAR;
@@ -360,20 +372,7 @@ void wa_render(                                      //
                         &z, 1                      //
                     );
 
-                    if (z < CANONICAL_Z_MAX || z > CANONICAL_Z_CLEAR) {
-                        continue;
-                    }
-
-                    float rgba_zf = map_range(              //
-                        z,                                  //
-                        CANONICAL_Z_MAX, CANONICAL_Z_CLEAR, //
-                        RGBA_Z_MAX, RGBA_Z_CLEAR            //
-                    );
-                    MUST(rgba_zf >= RGBA_Z_MAX);
-                    MUST(rgba_zf <= RGBA_Z_CLEAR);
-
-                    u8 rgba_z = (u8)rgba_zf;
-                    if (draw_buf[idx].z < rgba_z) {
+                    if (z < CANONICAL_Z_MAX || z_buf[idx] <= z) {
                         continue;
                     }
 
@@ -382,11 +381,10 @@ void wa_render(                                      //
                         alpha, beta, gamma                                    //
                     );
 
-                    color.z = rgba_z;
                     FragmentShOut out = fragment_sh(color);
 
-                    color = out.color;
-                    draw_buf[idx] = color;
+                    draw_buf[idx] = out.color;
+                    z_buf[idx] = z;
                 }
             }
         }
@@ -402,9 +400,6 @@ float wa_fline(float x, float y, float px, float py, float qx, float qy) {
 
 void wa_draw_line(float x0, float y0, float xf, float yf, RGBA c0, RGBA cf) {
     UNTESTED("void wa_draw_line(...)");
-
-    c0.z = RGBA_Z_MAX;
-    cf.z = RGBA_Z_MAX;
 
     V2f p = {x0, y0};
     V2f q = {xf, yf};
@@ -434,6 +429,7 @@ void wa_draw_line(float x0, float y0, float xf, float yf, RGBA c0, RGBA cf) {
             i32 idx = wa_buf_idx(pixel.x(), pixel.y());
 
             draw_buf[idx] = color;
+            z_buf[idx] = CANONICAL_Z_MAX;
         }
     }
 }

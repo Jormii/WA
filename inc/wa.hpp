@@ -17,8 +17,6 @@
 
 #define CANONICAL_Z_MAX -1.0f
 #define CANONICAL_Z_CLEAR 1.0f
-#define RGBA_Z_MAX 0
-#define RGBA_Z_CLEAR 255
 
 enum ProfSlots {
     SLOT_LOOP,

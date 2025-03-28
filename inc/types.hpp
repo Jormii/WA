@@ -9,15 +9,11 @@
 union RGBA {
     u8 ptr[4];
     u32 rgba;
-    u32 rgbz;
     V4<u8> v;
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
     struct {
-        u8 r, g, b;
-        union {
-            u8 a, z;
-        };
+        u8 r, g, b, a;
     };
 #pragma GCC diagnostic pop
 
