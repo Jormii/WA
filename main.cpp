@@ -13,9 +13,9 @@
 
 struct Vertex {
     V3f vertex;
+    V3f normal;
     RGBA color;
 };
-static_assert(sizeof(Vertex) == sizeof(V4f));
 
 i32 exit_request = 0;
 
@@ -25,13 +25,22 @@ int exit_callback(int arg1, int arg2, void *common);
 
 VertexShOut vertex_sh(i32 vertex_idx, const VAO &vao) {
     const M4f &mvp = vao.unif_m4f(0);
+    const M4f &nM = vao.unif_m4f(1);
     const V3f &vertex = vao.attr_v3f(0, vertex_idx);
-    const RGBA &color = vao.attr_rgba(1, vertex_idx);
+    const V3f &normal = vao.attr_v3f(1, vertex_idx);
+    const RGBA &color = vao.attr_rgba(2, vertex_idx);
 
-    V4f homogeneous = v4_point(vertex);
-    V4f out_vertex = mvp * homogeneous;
+    V4f out_vertex = mvp * v4_point(vertex);
 
-    RGBA out_color = color;
+    V3f eye_canonical = {0, 0, 2};
+    V3f vertex_canonical = persp_div(out_vertex);
+    V3f normal_canonical = (nM * v4_vector(normal)).xyz().norm();
+
+    V3f v = (eye_canonical - vertex_canonical).norm();
+    float dot = max(0.0f, V3f::dot(v, normal_canonical));
+
+    RGBA black = {0, 0, 0, 0};
+    RGBA out_color = RGBA::mix(black, color, dot);
 
     return {out_vertex, out_color};
 }
@@ -55,17 +64,47 @@ int main() {
     V3f at = {0, 0, 0};
     V3f up = wa_up();
 
+    V3f positions[] = {
+        {0.000000, -1.000000, -1.000000},
+        {0.866025, -1.000000, 0.500000},
+        {-0.866025, -1.000000, 0.500000},
+        {0.000000, 1.000000, 0.000000},
+    };
+    V3f normals[] = {
+        {0.8402, 0.2425, -0.4851},
+        {-0.0000, -1.0000, -0.0000},
+        {-0.0000, 0.2425, 0.9701},
+        {-0.8402, 0.2425, -0.4851},
+    };
+    RGBA colors[]{
+        {255, 0, 0, 255},
+        {0, 255, 0, 255},
+        {0, 0, 255, 255},
+        {255, 255, 255, 255},
+    };
+
     V3i triangles_[] = {
         {0, 1, 2},
-        {0, 2, 3},
-        {0, 3, 1},
-        {1, 2, 3},
+        {3, 4, 5},
+        {6, 7, 8},
+        {9, 10, 11},
     };
     Vertex vertices_[] = {
-        {{0, 1, 0}, {255, 255, 255, 255}},                                //
-        {{cosf(M_PI / 6), -1, sinf(M_PI / 6)}, {255, 0, 0, 255}},         //
-        {{cosf(5 * M_PI / 6), -1, sinf(5 * M_PI / 6)}, {0, 255, 0, 255}}, //
-        {{cosf(9 * M_PI / 6), -1, sinf(9 * M_PI / 6)}, {0, 0, 255, 255}}, //
+        {positions[0], normals[0], colors[0]},
+        {positions[3], normals[0], colors[3]},
+        {positions[1], normals[0], colors[1]},
+        //
+        {positions[0], normals[1], colors[0]},
+        {positions[1], normals[1], colors[1]},
+        {positions[2], normals[1], colors[2]},
+        //
+        {positions[1], normals[2], colors[1]},
+        {positions[3], normals[2], colors[3]},
+        {positions[2], normals[2], colors[2]},
+        //
+        {positions[2], normals[3], colors[2]},
+        {positions[3], normals[3], colors[3]},
+        {positions[0], normals[3], colors[0]},
     };
 
     VFPU_ALIGNED M4f m = M4f::I();
@@ -74,17 +113,32 @@ int main() {
     Buf<V3i> triangles = BUF_FROM_C_ARR(triangles_);
     Buf<Vertex> vertices = BUF_FROM_C_ARR(vertices_);
 
-    i32 n_ptrs = 2;  // {vertices} and {mvp} (below)
-    i32 n_unifs = 1; // {mvp}
-    i32 n_attrs = 2; // Position and color
+    i32 n_ptrs = 3;  // {vertices}, {mvp} and {nM} (these two below)
+    i32 n_unifs = 2; // {mvp} and {nM}
+    i32 n_attrs = 3; // Position, normal and color
     VAO vao = VAO::alloc(n_ptrs, n_unifs, n_attrs);
 
     // vao.ptr(0, mvp.ptr); // IS SET BELOW
-    vao.ptr(1, vertices.ptr);
+    // vao.ptr(1, nM.ptr); // IS SET BELOW
+    vao.ptr(2, vertices.ptr);
 
     vao.unif(0, 0, VAOType::M4f);
-    vao.attr(1, 0, 0, sizeof(Vertex), VAOType::V3f);
-    vao.attr(1, 1, sizeof(Vertex::vertex), sizeof(Vertex), VAOType::RGBA);
+    vao.unif(1, 1, VAOType::M4f);
+    vao.attr(              //
+        2, 0,              //
+        0, sizeof(Vertex), //
+        VAOType::V3f       //
+    );
+    vao.attr(                                   //
+        2, 1,                                   //
+        sizeof(Vertex::vertex), sizeof(Vertex), //
+        VAOType::V3f                            //
+    );
+    vao.attr(                                                            //
+        2, 2,                                                            //
+        sizeof(Vertex::vertex) + sizeof(Vertex::normal), sizeof(Vertex), //
+        VAOType::RGBA                                                    //
+    );
 
     setup_callbacks();
     i32 ok = wa_init();
@@ -109,8 +163,10 @@ int main() {
         VFPU_ALIGNED M4f v = wa_look_at(eye, at, up);
         VFPU_ALIGNED M4f mv = v * m;
         VFPU_ALIGNED M4f mvp = p * mv;
+        VFPU_ALIGNED M4f nM = mv.inverse().trans();
 
         vao.ptr(0, &mvp);
+        vao.ptr(1, &nM);
         wa_render(vao, triangles, vertex_sh, fragment_sh);
 
         wa_swap_bufs();
