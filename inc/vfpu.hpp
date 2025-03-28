@@ -17,7 +17,7 @@
 #define VFPU_OP_LOAD "lv"
 #define VFPU_OP_STORE "sv"
 
-#define VFPU_OP_MMULT_M "vmmul"
+#define VFPU_OP_MUL_MM "vmmul"
 
 #define VFPU_INST_MEMORY(OP_CODE, DIM, REG, ptr, OFFSET)                       \
     MUST(vfpu_check(ptr));                                                     \
@@ -47,9 +47,9 @@
     VFPU_STORE_V4_ROW(MAT, 3, ptr, OFFSET + 48);
 
 // clang-format off
-#define VFPU_MMULT_M4(DST_MAT, SRC1_MAT, SRC2_MAT)                             \
+#define VFPU_MUL_M4(DST_MAT, SRC1_MAT, SRC2_MAT)                             \
     NOTE("VFPU uses row vectors => Swap SRC1 and SRC2")                       \
-    VFPU_INST_BINARY(VFPU_OP_MMULT_M, VFPU_V4, VFPU_M(DST_MAT), VFPU_M(SRC2_MAT), VFPU_M(SRC1_MAT))
+    VFPU_INST_BINARY(VFPU_OP_MUL_MM, VFPU_V4, VFPU_M(DST_MAT), VFPU_M(SRC2_MAT), VFPU_M(SRC1_MAT))
 // clang-format on
 
 #pragma endregion
@@ -60,7 +60,7 @@
 [[nodiscard]] i32 vfpu_aligned_check(const void *ptr, i32 offset);
 
 template <>
-void mmult_m<4, float>(const float *m, const float *a, float *out);
+void mul_mm<4, float>(const float *m, const float *a, float *out);
 
 #pragma endregion
 
@@ -68,14 +68,14 @@ void mmult_m<4, float>(const float *m, const float *a, float *out);
 
 template <>
 inline Mat<4, float> Mat<4, float>::operator*(const Mat &rhs) const {
-    VFPU_ALIGNED Mat<4, float> mmult;
-    mmult_m<4, float>(ptr, rhs.ptr, mmult.ptr);
+    VFPU_ALIGNED Mat<4, float> mul_mm_;
+    mul_mm<4, float>(ptr, rhs.ptr, mul_mm_.ptr);
 
-    return mmult;
+    return mul_mm_;
 }
 
 template <>
-inline void mmult_m<4, float>(const float *m, const float *a, float *out) {
+inline void mul_mm<4, float>(const float *m, const float *a, float *out) {
 #define M_MAT 0
 #define A_MAT 1
 #define OUT_MAT 2
@@ -86,7 +86,7 @@ inline void mmult_m<4, float>(const float *m, const float *a, float *out) {
 
     VFPU_LOAD_M4(M_MAT, m, 0);
     VFPU_LOAD_M4(A_MAT, a, 0);
-    VFPU_MMULT_M4(OUT_MAT, M_MAT, A_MAT);
+    VFPU_MUL_M4(OUT_MAT, M_MAT, A_MAT);
     VFPU_STORE_M4(OUT_MAT, out, 0);
 
 #undef M_MAT

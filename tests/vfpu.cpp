@@ -55,7 +55,7 @@ i32 VFPU_LOAD_M4__and__VFPU_STORE_M4_test(void) {
 }
 
 // cpp.hpp::Mat
-i32 Mat_operator_mult_Mat__4_float_test(void) {
+i32 Mat_operator_mul_Mat__4_float_test(void) {
     VFPU_ALIGNED Mat<4, float> m = {
         2, 3, 4, 5, //
         3, 4, 5, 6, //
@@ -68,15 +68,15 @@ i32 Mat_operator_mult_Mat__4_float_test(void) {
         6, 7, 8, 9, //
         9, 8, 7, 6, //
     };
-    VFPU_ALIGNED Mat<4, float> expected_mmult = {
+    VFPU_ALIGNED Mat<4, float> expected_mul_mm = {
         83,  81,  79,  77,  //
         103, 101, 99,  97,  //
         123, 121, 119, 117, //
         143, 141, 139, 137, //
     };
 
-    Mat<4, float> mmult = m * a;
-    ASSERTZ(mmult == expected_mmult);
+    Mat<4, float> mul_mm = m * a;
+    ASSERTZ(mul_mm == expected_mul_mm);
 
     return 1;
 }
@@ -103,7 +103,7 @@ i32 vfpu_aligned_check_test(void) {
     return 1;
 }
 
-i32 mmult_m__4_float_test(void) {
+i32 mul_mm__4_float_test(void) {
     VFPU_ALIGNED float m[4 * 4] = {
         2, 3, 4, 5, //
         3, 4, 5, 6, //
@@ -116,16 +116,16 @@ i32 mmult_m__4_float_test(void) {
         6, 7, 8, 9, //
         9, 8, 7, 6, //
     };
-    VFPU_ALIGNED float expected_mmult[C_ARR_LEN(m)] = {
+    VFPU_ALIGNED float expected_mul_mm[C_ARR_LEN(m)] = {
         83,  81,  79,  77,  //
         103, 101, 99,  97,  //
         123, 121, 119, 117, //
         143, 141, 139, 137, //
     };
 
-    VFPU_ALIGNED float mmult[C_ARR_LEN(m)];
-    mmult_m<4, float>(m, a, mmult);
-    ASSERTZ(eq_v(mmult, expected_mmult, C_ARR_LEN(m)));
+    VFPU_ALIGNED float mul_mm_[C_ARR_LEN(m)];
+    mul_mm<4, float>(m, a, mul_mm_);
+    ASSERTZ(eq_v(mul_mm_, expected_mul_mm, C_ARR_LEN(m)));
 
     return 1;
 }
