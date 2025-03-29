@@ -448,20 +448,17 @@ void wa_render(                                      //
 
     for (i32 i = 0; i < triangles.len; ++i) {
         V3f screen[3];
-        RGBA screen_colors[3];
         const V3i &triangle = triangles[i];
 
-        for (i32 j = 0; j < triangle.len(); ++j) {
-            i32 vertex_idx = triangle[j];
-            VertexShOut out = vertex_sh(vertex_idx, vao);
+        for (i32 tri_v_idx = 0; tri_v_idx < triangle.len(); ++tri_v_idx) {
+            i32 v_idx = triangle[tri_v_idx];
+            VertexShOut out = vertex_sh(v_idx, tri_v_idx, vao);
 
             V3f canonical = persp_div(out.vertex);
             V3f canonical_xy = {canonical.x(), canonical.y(), 1};
 
-            screen[j] = w * canonical_xy;
-            screen_colors[j] = out.color;
-
-            screen[j].z() = canonical.z();
+            screen[tri_v_idx] = w * canonical_xy;
+            screen[tri_v_idx].z() = canonical.z();
         }
 
         float x0, y0;
@@ -508,12 +505,8 @@ void wa_render(                                      //
                         continue;
                     }
 
-                    RGBA color = RGBA::bary(                                  //
-                        screen_colors[0], screen_colors[1], screen_colors[2], //
-                        alpha, beta, gamma                                    //
-                    );
-
-                    FragmentShOut out = fragment_sh(color);
+                    vao.__make_bary(alpha, beta, gamma);
+                    FragmentShOut out = fragment_sh(vao);
 
                     draw_buf[idx] = out.color;
                     z_buf[idx] = z;

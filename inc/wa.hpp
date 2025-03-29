@@ -90,15 +90,14 @@ struct VAO {
 
 struct VertexShOut {
     V4f vertex;
-    RGBA color;
 };
 
 struct FragmentShOut {
     RGBA color;
 };
 
-typedef VertexShOut (*VertexSh_fp)(i32 vertex_idx, const VAO &vao);
-typedef FragmentShOut (*FragmentSh_fp)(const RGBA &color);
+typedef VertexShOut (*VertexSh_fp)(i32 v_idx, i32 tri_v_idx, const VAO &vao);
+typedef FragmentShOut (*FragmentSh_fp)(const VAO &vao);
 
 [[nodiscard]] i32 wa_init();
 void wa_clear(RGBA color);
