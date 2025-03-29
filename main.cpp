@@ -11,6 +11,35 @@
 #include "vfpu.hpp"
 #include "wa.hpp"
 
+enum __VAOBuf {
+    BUF_V,
+    BUF_MV,
+    BUF_NM,
+    BUF_MVP,
+    __BUF_CNT,
+};
+
+enum __VAOIn {
+    IN_V,
+    IN_N,
+    IN_COLOR,
+    __IN_CNT,
+};
+
+enum __VAOUnif {
+    UNIF_MV,
+    UNIF_NM,
+    UNIF_MVP,
+    __UNIF_CNT,
+};
+
+enum __VAOOut {
+    OUT_V,
+    OUT_N,
+    OUT_COLOR,
+    __OUT_CNT,
+};
+
 struct Vertex {
     V3f vertex;
     V3f normal;
@@ -23,30 +52,42 @@ SceUID setup_callbacks();
 int callback_thread(SceSize args, void *argp);
 int exit_callback(int arg1, int arg2, void *common);
 
-VertexShOut vertex_sh(i32 vertex_idx, const VAO &vao) {
-    const M4f &mvp = vao.unif_m4f(0);
-    const M4f &nM = vao.unif_m4f(1);
-    const V3f &vertex = vao.attr_v3f(0, vertex_idx);
-    const V3f &normal = vao.attr_v3f(1, vertex_idx);
-    const RGBA &color = vao.attr_rgba(2, vertex_idx);
+VertexShOut vertex_sh(i32 v_idx, i32 tri_v_idx, const VAO &vao) {
+    const M4f &mv = *vao.unif_m4f(UNIF_MV);
+    const M4f &nM = *vao.unif_m4f(UNIF_NM);
+    const M4f &mvp = *vao.unif_m4f(UNIF_MVP);
+    const V3f &vertex = vao.in_v3f(IN_V, v_idx);
+    const V3f &normal = vao.in_v3f(IN_N, v_idx);
+    const RGBA &color = vao.in_rgba(IN_COLOR, v_idx);
 
-    V4f out_vertex = mvp * v4_point(vertex);
+    V4f v_homo = v4_point(vertex);
+    V4f n_homo = v4_vector(normal);
 
-    V3f eye_canonical = {0, 0, 2};
-    V3f vertex_canonical = persp_div(out_vertex);
-    V3f normal_canonical = (nM * v4_vector(normal)).xyz().norm();
+    V4f mv_v = mv * v_homo;
+    V4f nM_n = nM * n_homo;
+    V4f mvp_v = mvp * v_homo;
 
-    V3f v = (eye_canonical - vertex_canonical).norm();
-    float dot = max(0.0f, V3f::dot(v, normal_canonical));
+    MUST(eq(mv_v.w(), 1.0f));
 
-    RGBA black = {0, 0, 0, 0};
-    RGBA out_color = RGBA::mix(black, color, dot);
+    vao.out_v3f(OUT_V, tri_v_idx) = mv_v.xyz();
+    vao.out_v3f(OUT_N, tri_v_idx) = nM_n.xyz();
+    vao.out_rgba(OUT_COLOR, tri_v_idx) = color;
 
-    return {out_vertex, out_color};
+    return {mvp_v};
 }
 
-FragmentShOut fragment_sh(const RGBA &color) {
-    RGBA out_color = color;
+FragmentShOut fragment_sh(const VAO &vao) {
+    const V3f &vertex = vao.out_bary_v3f(OUT_V);
+    const V3f &normal = vao.out_bary_v3f(OUT_N);
+    const RGBA &color = vao.out_bary_rgba(OUT_COLOR);
+
+    V3f n = normal.norm();
+    V3f v = -vertex.norm();
+    float dot = max(0.0f, V3f::dot(n, v));
+
+    RGBA black = {.rgba = 0};
+    RGBA out_color = RGBA::mix(black, color, dot);
+
     return {out_color};
 }
 
@@ -55,6 +96,7 @@ int main() {
     prof_rename(SLOT_WA_CLEAR, "wa_clear");
     prof_rename(SLOT_WA_RENDER, "wa_render");
 
+    float dist_to_origin = 5.0f;
     RGBA g = {.ptr = {127, 127, 127, 255}};
 
     float fov = 60.0f;
@@ -113,29 +155,32 @@ int main() {
     Buf<V3i> triangles = BUF_FROM_C_ARR(triangles_);
     Buf<Vertex> vertices = BUF_FROM_C_ARR(vertices_);
 
-    i32 n_ptrs = 3;  // {vertices}, {mvp} and {nM} (these two below)
-    i32 n_unifs = 2; // {mvp} and {nM}
-    i32 n_attrs = 3; // Position, normal and color
-    VAO vao = VAO::alloc(n_ptrs, n_unifs, n_attrs);
+    i32 n_bufs = __BUF_CNT;
+    i32 n_ins = __IN_CNT;
+    i32 n_unifs = __UNIF_CNT;
+    VAOType outs_ts_[] = {VAOType::V3f, VAOType::V3f, VAOType::RGBA};
+    static_assert(C_ARR_LEN(outs_ts_) == __OUT_CNT);
 
-    // vao.ptr(0, mvp.ptr); // IS SET BELOW
-    // vao.ptr(1, nM.ptr); // IS SET BELOW
-    vao.ptr(2, vertices.ptr);
+    Buf<VAOType> outs_ts = BUF_FROM_C_ARR(outs_ts_);
+    VAO vao = VAO::alloc(n_bufs, n_ins, n_unifs, outs_ts);
 
-    vao.unif(0, 0, VAOType::M4f);
-    vao.unif(1, 1, VAOType::M4f);
-    vao.attr(              //
-        2, 0,              //
+    vao.buf(BUF_V, vertices.ptr, vertices.len);
+
+    vao.unif(BUF_MV, UNIF_MV, VAOType::M4f);
+    vao.unif(BUF_NM, UNIF_NM, VAOType::M4f);
+    vao.unif(BUF_MVP, UNIF_MVP, VAOType::M4f);
+    vao.in(                //
+        BUF_V, IN_V,       //
         0, sizeof(Vertex), //
         VAOType::V3f       //
     );
-    vao.attr(                                   //
-        2, 1,                                   //
+    vao.in(                                     //
+        BUF_V, IN_N,                            //
         sizeof(Vertex::vertex), sizeof(Vertex), //
         VAOType::V3f                            //
     );
-    vao.attr(                                                            //
-        2, 2,                                                            //
+    vao.in(                                                              //
+        BUF_V, IN_COLOR,                                                 //
         sizeof(Vertex::vertex) + sizeof(Vertex::normal), sizeof(Vertex), //
         VAOType::RGBA                                                    //
     );
@@ -157,16 +202,17 @@ int main() {
 
         wa_clear(g);
 
-        eye.x() = 5 * cosf(elapsed);
-        eye.y() = 5 * sinf(elapsed + M_PI);
-        eye.z() = -(5 * sinf(elapsed));
+        eye.x() = dist_to_origin * cosf(elapsed);
+        eye.y() = dist_to_origin * sinf(elapsed + M_PI);
+        eye.z() = -(dist_to_origin * sinf(elapsed));
         VFPU_ALIGNED M4f v = wa_look_at(eye, at, up);
         VFPU_ALIGNED M4f mv = v * m;
         VFPU_ALIGNED M4f mvp = p * mv;
         VFPU_ALIGNED M4f nM = mv.inverse().trans();
 
-        vao.ptr(0, &mvp);
-        vao.ptr(1, &nM);
+        vao.buf(BUF_MV, &mv, 1);
+        vao.buf(BUF_NM, &nM, 1);
+        vao.buf(BUF_MVP, &mvp, 1);
         wa_render(vao, triangles, vertex_sh, fragment_sh);
 
         wa_swap_bufs();
