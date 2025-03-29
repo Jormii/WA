@@ -30,36 +30,62 @@ enum class VAOType {
     RGBA,
 };
 
-struct VAOUnif {
-    i32 ptr_idx;
-    VAOType type;
+struct VAOBuf {
+    void *ptr;
+    i32 len;
+    // TODO: error: forming reference to void T &Buf<T>::operator[](i32 idx)
 };
 
-struct VAOAttr {
-    i32 ptr_idx;
+struct VAOIn {
+    i32 buf_idx;
     i32 offset;
     i32 stride;
     VAOType type;
 };
 
+struct VAOUnif {
+    i32 buf_idx;
+    VAOType type;
+};
+
+struct VAOOut {
+    i32 offset;
+    VAOType type;
+};
+
 struct VAO {
-    const u8 *bptr;
-    Buf<void *> ptrs;
+    const u8 *const bptr; // Pointer returned by malloc()
+    Buf<VAOBuf> bufs;
+    Buf<VAOIn> ins;
     Buf<VAOUnif> unifs;
-    Buf<VAOAttr> attrs;
+    i32 outs_stride;
+    Buf<u8> outs_buf;
+    Buf<u8> outs_bary_buf; // TODO: Might be possible to reuse {outs_buf}
+    Buf<VAOOut> outs;
 
-    void ptr(i32 ptr_idx, void *ptr);
-    void unif(i32 ptr_idx, i32 unif_idx, VAOType type);
-    void attr(i32 ptr_idx, i32 attr_idx, i32 offset, i32 stride, VAOType type);
+    void buf(i32 buf_idx, void *ptr, i32 len);
+    void in(i32 buf_idx, i32 in_idx, i32 offset, i32 stride, VAOType type);
+    void unif(i32 buf_idx, i32 unif_idx, VAOType type);
+    void __make_bary(float alpha, float beta, float gamma) const;
 
-    const M4f &unif_m4f(i32 unif_idx) const;
-    const void *__get_unif(i32 unif_idx, VAOType type) const;
+    const V3f &in_v3f(i32 in_idx, i32 v_idx) const;
+    const RGBA &in_rgba(i32 in_idx, i32 v_idx) const;
+    const void *__get_in(i32 in_idx, i32 v_idx, VAOType type) const;
 
-    const V3f &attr_v3f(i32 attr_idx, i32 vertex_idx) const;
-    const RGBA &attr_rgba(i32 attr_idx, i32 vertex_idx) const;
-    const void *__get_attr(i32 attr_idx, i32 vertex_idx, VAOType type) const;
+    const Buf<V3f> &unif_v3f(i32 unif_idx) const;
+    const Buf<M4f> &unif_m4f(i32 unif_idx) const;
+    const VAOBuf &__get_unif(i32 unif_idx, VAOType type) const;
 
-    static VAO alloc(i32 n_ptrs, i32 n_unifs, i32 n_attrs);
+    V3f &out_v3f(i32 out_idx, i32 tri_v_idx) const;
+    RGBA &out_rgba(i32 out_idx, i32 tri_v_idx) const;
+    void *__get_out(i32 out_idx, i32 tri_v_idx, VAOType type) const;
+
+    const V3f &out_bary_v3f(i32 out_idx) const;
+    const RGBA &out_bary_rgba(i32 out_idx) const;
+    void *__get_out_bary(i32 out_idx, VAOType type) const;
+
+    static i32 size(VAOType type);
+    static VAO alloc(i32 n_bufs, i32 n_ins, i32 n_unifs, Buf<VAOType> outs_ts);
 };
 
 struct VertexShOut {

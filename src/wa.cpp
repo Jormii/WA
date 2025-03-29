@@ -18,115 +18,247 @@ static RGBA *draw_buf = (RGBA *)DRAW_BUF_ADDR;
 static RGBA *display_buf = (RGBA *)DISPLAY_BUF_ADDR;
 static float *z_buf = NULL;
 
-void VAO::ptr(i32 ptr_idx, void *ptr) {
-    MUST(c_arr_idx_check(ptrs.ptr, ptrs.len, ptr_idx));
-    MUST(ptr != NULL);
+void VAO::buf(i32 buf_idx, void *ptr, i32 len) {
+    MUST(c_arr_idx_check(bufs.ptr, bufs.len, buf_idx));
+    MUST(c_arr_check(ptr, len));
 
-    ptrs[ptr_idx] = ptr;
+    VAOBuf *buf = bufs + buf_idx;
+    buf->ptr = ptr;
+    buf->len = len;
 }
 
-void VAO::unif(i32 ptr_idx, i32 unif_idx, VAOType type) {
-    MUST(c_arr_idx_check(ptrs.ptr, ptrs.len, ptr_idx));
+void VAO::in(i32 buf_idx, i32 in_idx, i32 offset, i32 stride, VAOType type) {
+    MUST(c_arr_idx_check(bufs.ptr, bufs.len, buf_idx));
+    MUST(c_arr_idx_check(ins.ptr, ins.len, in_idx));
+    MUST(offset >= 0);
+    MUST(stride > 0);
+
+    VAOIn *in = ins + in_idx;
+    in->buf_idx = buf_idx;
+    in->offset = offset;
+    in->stride = stride;
+    in->type = type;
+}
+
+void VAO::unif(i32 buf_idx, i32 unif_idx, VAOType type) {
+    MUST(c_arr_idx_check(bufs.ptr, bufs.len, buf_idx));
     MUST(c_arr_idx_check(unifs.ptr, unifs.len, unif_idx));
 
     VAOUnif *unif = unifs + unif_idx;
-    unif->ptr_idx = ptr_idx;
+    unif->buf_idx = buf_idx;
     unif->type = type;
 }
 
-void VAO::attr(                                                     //
-    i32 ptr_idx, i32 attr_idx, i32 offset, i32 stride, VAOType type //
-) {
-    MUST(c_arr_idx_check(ptrs.ptr, ptrs.len, ptr_idx));
-    MUST(c_arr_idx_check(attrs.ptr, attrs.len, attr_idx));
-    MUST(offset >= 0);
-    MUST(stride >= 0);
+void VAO::__make_bary(float alpha, float beta, float gamma) const {
+    for (i32 out_idx = 0; out_idx < outs.len; ++out_idx) {
+        const VAOOut *out = outs + out_idx;
 
-    VAOAttr *attr = attrs + attr_idx;
-    attr->ptr_idx = ptr_idx;
-    attr->offset = offset;
-    attr->stride = stride;
-    attr->type = type;
+        VAOType type = out->type;
+        void *ptr = __get_out_bary(out_idx, type);
+        const void *a = __get_out(out_idx, 0, type);
+        const void *b = __get_out(out_idx, 1, type);
+        const void *g = __get_out(out_idx, 2, type);
+
+        switch (type) {
+        case VAOType::V3f:
+            *((V3f *)ptr) = V3f::bary(                 //
+                *((V3f *)a), *((V3f *)b), *((V3f *)g), //
+                alpha, beta, gamma                     //
+            );
+            break;
+        case VAOType::RGBA:
+            *((RGBA *)ptr) = RGBA::bary(                  //
+                *((RGBA *)a), *((RGBA *)b), *((RGBA *)g), //
+                alpha, beta, gamma                        //
+            );
+            break;
+        default:
+            MUST(0 && (i32)type);
+            break;
+        }
+    }
 }
 
-#define __UNIF_GET(RET_T, idx) *(RET_T *)(__get_unif(idx, VAOType::RET_T))
+#define __IN_GET(RET_T, idx, v_idx)                                            \
+    *(RET_T *)(__get_in(idx, v_idx, VAOType::RET_T))
 
-const M4f &VAO::unif_m4f(i32 unif_idx) const {
+const V3f &VAO::in_v3f(i32 in_idx, i32 v_idx) const {
+    return __IN_GET(V3f, in_idx, v_idx);
+}
+
+const RGBA &VAO::in_rgba(i32 in_idx, i32 v_idx) const {
+    return __IN_GET(RGBA, in_idx, v_idx);
+}
+
+#undef __IN_GET
+
+const void *VAO::__get_in(i32 in_idx, i32 v_idx, VAOType type) const {
+    MUST(c_arr_idx_check(ins.ptr, ins.len, in_idx));
+
+    const VAOIn *in = ins + in_idx;
+    i32 buf_idx = in->buf_idx;
+    i32 offset = in->offset;
+    i32 stride = in->stride;
+
+    MUST(c_arr_idx_check(bufs.ptr, bufs.len, buf_idx));
+    MUST(offset >= 0);
+    MUST(stride > 0);
+    MUST(type == in->type);
+
+    VAOBuf buf = bufs[buf_idx];
+    MUST(c_arr_idx_check(buf.ptr, buf.len, v_idx));
+
+    const u8 *out_ptr = ((u8 *)(buf.ptr) + v_idx * stride) + offset;
+    return out_ptr;
+}
+
+#define __UNIF_GET(RET_T, idx) (Buf<RET_T> &)(__get_unif(idx, VAOType::RET_T))
+
+const Buf<V3f> &VAO::unif_v3f(i32 unif_idx) const {
+    return __UNIF_GET(V3f, unif_idx);
+};
+
+const Buf<M4f> &VAO::unif_m4f(i32 unif_idx) const {
     return __UNIF_GET(M4f, unif_idx);
 }
 
 #undef __UNIF_GET
 
-const void *VAO::__get_unif(i32 unif_idx, VAOType type) const {
+const VAOBuf &VAO::__get_unif(i32 unif_idx, VAOType type) const {
     MUST(c_arr_idx_check(unifs.ptr, unifs.len, unif_idx));
 
     const VAOUnif *unif = unifs + unif_idx;
-    i32 ptr_idx = unif->ptr_idx;
+    i32 buf_idx = unif->buf_idx;
 
-    MUST(c_arr_idx_check(ptrs.ptr, ptrs.len, ptr_idx))
+    MUST(c_arr_idx_check(bufs.ptr, bufs.len, buf_idx))
     MUST(type == unif->type);
 
-    const void *ptr = ptrs[ptr_idx];
-    MUST(ptr != NULL);
-
-    return ptr;
+    const VAOBuf &buf = bufs[buf_idx];
+    return buf;
 }
 
-#define __ATTR_GET(RET_T, idx, v_idx)                                          \
-    *(RET_T *)(__get_attr(idx, v_idx, VAOType::RET_T))
+#define __OUT_GET(RET_T, idx, t_v_idx)                                         \
+    *(RET_T *)(__get_out(idx, t_v_idx, VAOType::RET_T))
 
-const V3f &VAO::attr_v3f(i32 attr_idx, i32 vertex_idx) const {
-    return __ATTR_GET(V3f, attr_idx, vertex_idx);
+V3f &VAO::out_v3f(i32 out_idx, i32 tri_v_idx) const {
+    return __OUT_GET(V3f, out_idx, tri_v_idx);
 }
 
-const RGBA &VAO::attr_rgba(i32 attr_idx, i32 vertex_idx) const {
-    return __ATTR_GET(RGBA, attr_idx, vertex_idx);
+RGBA &VAO::out_rgba(i32 out_idx, i32 tri_v_idx) const {
+    return __OUT_GET(RGBA, out_idx, tri_v_idx);
 }
 
-#undef __ATTR_GET
+#undef __OUT_GET
 
-const void *VAO::__get_attr(i32 attr_idx, i32 vertex_idx, VAOType type) const {
-    MUST(c_arr_idx_check(attrs.ptr, attrs.len, attr_idx));
+void *VAO::__get_out(i32 out_idx, i32 tri_v_idx, VAOType type) const {
+    MUST(c_arr_idx_check(outs.ptr, outs.len, out_idx));
+    MUST(tri_v_idx >= 0);
+    MUST(tri_v_idx < 3);
 
-    const VAOAttr *attr = attrs + attr_idx;
-    i32 ptr_idx = attr->ptr_idx;
-    i32 offset = attr->offset;
-    i32 stride = attr->stride;
+    const VAOOut *out = outs + out_idx;
+    i32 offset = out->offset;
 
-    MUST(c_arr_idx_check(ptrs.ptr, ptrs.len, ptr_idx));
     MUST(offset >= 0);
-    MUST(stride >= 0);
-    MUST(type == attr->type);
+    MUST(type == out->type);
 
-    const void *ptr = ptrs[ptr_idx];
-    MUST(ptr != NULL);
-
-    const u8 *out_ptr = ((u8 *)(ptr) + vertex_idx * stride) + offset;
+    u8 *out_ptr = (outs_buf.ptr + tri_v_idx * outs_stride) + offset;
     return out_ptr;
 }
 
-VAO VAO::alloc(i32 n_ptrs, i32 n_unifs, i32 n_attrs) {
-    MUST(n_ptrs >= 0);
+#define __OUT_BARY_GET(RET_T, idx)                                             \
+    *(RET_T *)(__get_out_bary(idx, VAOType::RET_T))
+
+const V3f &VAO::out_bary_v3f(i32 out_idx) const {
+    return __OUT_BARY_GET(V3f, out_idx);
+}
+
+const RGBA &VAO::out_bary_rgba(i32 out_idx) const {
+    return __OUT_BARY_GET(RGBA, out_idx);
+}
+
+#undef __OUT_BARY_GET
+
+void *VAO::__get_out_bary(i32 out_idx, VAOType type) const {
+    MUST(c_arr_idx_check(outs.ptr, outs.len, out_idx));
+
+    const VAOOut *out = outs + out_idx;
+    i32 offset = out->offset;
+
+    MUST(offset >= 0);
+    MUST(type == out->type);
+
+    u8 *out_ptr = outs_bary_buf.ptr + offset;
+    return out_ptr;
+}
+
+i32 VAO::size(VAOType type) {
+    switch (type) {
+    case VAOType::V3f:
+        return sizeof(V3f);
+    case VAOType::M4f:
+        return sizeof(M4f);
+    case VAOType::RGBA:
+        return sizeof(RGBA);
+    default:
+        MUST(0 && (i32)type);
+        return 0;
+    }
+}
+
+VAO VAO::alloc(i32 n_bufs, i32 n_ins, i32 n_unifs, Buf<VAOType> outs_ts) {
+    MUST(n_bufs >= 0);
+    MUST(n_ins >= 0);
     MUST(n_unifs >= 0);
-    MUST(n_attrs >= 0);
+    MUST(c_arr_check(outs_ts.ptr, outs_ts.len));
 
-    i32 ptrs_size = n_ptrs * sizeof(void *);
+    i32 n_outs = outs_ts.len;
+
+    i32 outs_ts_size = 0;
+    for (i32 i = 0; i < n_outs; ++i) {
+        VAOType type = outs_ts[i];
+        outs_ts_size += VAO::size(type);
+    }
+
+    i32 bufs_size = n_bufs * sizeof(VAOBuf);
+    i32 ins_size = n_ins * sizeof(VAOIn);
     i32 unifs_size = n_unifs * sizeof(VAOUnif);
-    i32 attrs_size = n_attrs * sizeof(VAOAttr);
+    i32 outs_buf_size = 3 * outs_ts_size;
+    i32 outs_bary_buf_size = outs_ts_size;
+    i32 outs_size = n_outs * sizeof(VAOOut);
 
-    i32 size = ptrs_size + unifs_size + attrs_size;
+    i32 size = bufs_size + ins_size + unifs_size //
+               + outs_buf_size + outs_bary_buf_size + outs_size;
+
     u8 *bptr = (u8 *)malloc(size); // TODO: Custom malloc()
     MUST(bptr != NULL);
 
-    u8 *ptrs_ptr = bptr;
-    u8 *unifs_ptr = ptrs_ptr + ptrs_size;
-    u8 *attrs_ptr = unifs_ptr + unifs_size;
+    u8 *bufs_ptr = bptr;
+    u8 *ins_ptr = bufs_ptr + bufs_size;
+    u8 *unifs_ptr = ins_ptr + ins_size;
+    u8 *outs_buf_ptr = unifs_ptr + unifs_size;
+    u8 *outs_bary_buf_ptr = outs_buf_ptr + outs_buf_size;
+    u8 *outs_ptr = outs_bary_buf_ptr + outs_bary_buf_size;
 
-    Buf<void *> ptrs = {(void **)ptrs_ptr, n_ptrs};
+    Buf<VAOBuf> bufs = {(VAOBuf *)bufs_ptr, n_bufs};
+    Buf<VAOIn> ins = {(VAOIn *)ins_ptr, n_ins};
     Buf<VAOUnif> unifs = {(VAOUnif *)unifs_ptr, n_unifs};
-    Buf<VAOAttr> attrs = {(VAOAttr *)attrs_ptr, n_attrs};
+    Buf<u8> outs_buf = {(u8 *)outs_buf_ptr, outs_buf_size};
+    Buf<u8> outs_bary_buf = {(u8 *)outs_bary_buf_ptr, outs_bary_buf_size};
+    Buf<VAOOut> outs = {(VAOOut *)outs_ptr, n_outs};
 
-    return {bptr, ptrs, unifs, attrs};
+    i32 offset = 0;
+    for (i32 i = 0; i < n_outs; ++i) {
+        VAOOut *out = outs + i;
+        VAOType type = outs_ts[i];
+
+        out->offset = offset;
+        out->type = type;
+
+        offset += VAO::size(type);
+    }
+
+    i32 outs_stride = offset;
+    return {bptr, bufs, ins, unifs, outs_stride, outs_buf, outs_bary_buf, outs};
 }
 
 i32 wa_init() {
