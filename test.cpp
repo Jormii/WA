@@ -53,9 +53,11 @@ extern i32 Arr_bary_test(void);
 extern i32 Arr_operator_subscript_test(void);
 extern i32 Arr_operator_add_test(void);
 extern i32 Arr_operator_neg_test(void);
+extern i32 Arr_operator_add_assign_test(void);
 extern i32 Arr_operator_div_test(void);
 extern i32 Arr_operator_sub_test(void);
 extern i32 Arr_operator_eq_test(void);
+extern i32 Arr_operator_mul_test(void);
 extern i32 Mat_n_test(void);
 extern i32 Mat_len_test(void);
 extern i32 Mat_det_test(void);
@@ -74,6 +76,7 @@ extern i32 Mat_operator_eq_test(void);
 extern i32 Mat_operator_mul_test(void);
 extern i32 min_test(void);
 extern i32 max_test(void);
+extern i32 clamp_test(void);
 extern i32 eq_test(void);
 extern i32 eq__float_test(void);
 extern i32 map_range_test(void);
@@ -84,6 +87,7 @@ extern i32 neg_v_test(void);
 extern i32 norm_v_test(void);
 extern i32 dot_v_test(void);
 extern i32 eq_v_test(void);
+extern i32 add_v_test(void);
 extern i32 sub_v_test(void);
 extern i32 mul_vs_test(void);
 extern i32 div_vs_test(void);
@@ -113,7 +117,7 @@ extern i32 __VFPU_deinit_test(void);
 
 int main(void) {
 	i32 passed = 0;
-	const i32 N_TESTS = 86;
+	const i32 N_TESTS = 90;
 
 	testing_started_cb();
 
@@ -151,9 +155,11 @@ int main(void) {
 	passed += test_function_cb(Arr_operator_subscript_test, "Arr_operator_subscript_test");
 	passed += test_function_cb(Arr_operator_add_test, "Arr_operator_add_test");
 	passed += test_function_cb(Arr_operator_neg_test, "Arr_operator_neg_test");
+	passed += test_function_cb(Arr_operator_add_assign_test, "Arr_operator_add_assign_test");
 	passed += test_function_cb(Arr_operator_div_test, "Arr_operator_div_test");
 	passed += test_function_cb(Arr_operator_sub_test, "Arr_operator_sub_test");
 	passed += test_function_cb(Arr_operator_eq_test, "Arr_operator_eq_test");
+	passed += test_function_cb(Arr_operator_mul_test, "Arr_operator_mul_test");
 	passed += test_function_cb(Mat_n_test, "Mat_n_test");
 	passed += test_function_cb(Mat_len_test, "Mat_len_test");
 	passed += test_function_cb(Mat_det_test, "Mat_det_test");
@@ -172,6 +178,7 @@ int main(void) {
 	passed += test_function_cb(Mat_operator_mul_test, "Mat_operator_mul_test");
 	passed += test_function_cb(min_test, "min_test");
 	passed += test_function_cb(max_test, "max_test");
+	passed += test_function_cb(clamp_test, "clamp_test");
 	passed += test_function_cb(eq_test, "eq_test");
 	passed += test_function_cb(eq__float_test, "eq__float_test");
 	passed += test_function_cb(map_range_test, "map_range_test");
@@ -182,6 +189,7 @@ int main(void) {
 	passed += test_function_cb(norm_v_test, "norm_v_test");
 	passed += test_function_cb(dot_v_test, "dot_v_test");
 	passed += test_function_cb(eq_v_test, "eq_v_test");
+	passed += test_function_cb(add_v_test, "add_v_test");
 	passed += test_function_cb(sub_v_test, "sub_v_test");
 	passed += test_function_cb(mul_vs_test, "mul_vs_test");
 	passed += test_function_cb(div_vs_test, "div_vs_test");
