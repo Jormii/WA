@@ -26,6 +26,7 @@ enum ProfSlots {
 
 enum class VAOType {
     V3f,
+    V4f,
     M4f,
     RGBA,
 };
@@ -83,10 +84,12 @@ struct VAO {
     const VAOBuf &__get_unif(i32 unif_idx, VAOType type) const;
 
     V3f &out_v3f(i32 out_idx, i32 tri_v_idx) const;
+    V4f &out_v4f(i32 out_idx, i32 tri_v_idx) const;
     RGBA &out_rgba(i32 out_idx, i32 tri_v_idx) const;
     void *__get_out(i32 out_idx, i32 tri_v_idx, VAOType type) const;
 
     const V3f &out_bary_v3f(i32 out_idx) const;
+    const V4f &out_bary_v4f(i32 out_idx) const;
     const RGBA &out_bary_rgba(i32 out_idx) const;
     void *__get_out_bary(i32 out_idx, VAOType type) const;
 

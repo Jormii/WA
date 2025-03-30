@@ -66,6 +66,12 @@ void VAO::__make_bary(float alpha, float beta, float gamma) const {
                 alpha, beta, gamma                     //
             );
             break;
+        case VAOType::V4f:
+            *((V4f *)ptr) = V4f::bary(                 //
+                *((V4f *)a), *((V4f *)b), *((V4f *)g), //
+                alpha, beta, gamma                     //
+            );
+            break;
         case VAOType::RGBA:
             *((RGBA *)ptr) = RGBA::bary(                  //
                 *((RGBA *)a), *((RGBA *)b), *((RGBA *)g), //
@@ -144,6 +150,10 @@ V3f &VAO::out_v3f(i32 out_idx, i32 tri_v_idx) const {
     return __OUT_GET(V3f, out_idx, tri_v_idx);
 }
 
+V4f &VAO::out_v4f(i32 out_idx, i32 tri_v_idx) const {
+    return __OUT_GET(V4f, out_idx, tri_v_idx);
+}
+
 RGBA &VAO::out_rgba(i32 out_idx, i32 tri_v_idx) const {
     return __OUT_GET(RGBA, out_idx, tri_v_idx);
 }
@@ -172,6 +182,10 @@ const V3f &VAO::out_bary_v3f(i32 out_idx) const {
     return __OUT_BARY_GET(V3f, out_idx);
 }
 
+const V4f &VAO::out_bary_v4f(i32 out_idx) const {
+    return __OUT_BARY_GET(V4f, out_idx);
+}
+
 const RGBA &VAO::out_bary_rgba(i32 out_idx) const {
     return __OUT_BARY_GET(RGBA, out_idx);
 }
@@ -195,6 +209,8 @@ i32 VAO::size(VAOType type) {
     switch (type) {
     case VAOType::V3f:
         return sizeof(V3f);
+    case VAOType::V4f:
+        return sizeof(V4f);
     case VAOType::M4f:
         return sizeof(M4f);
     case VAOType::RGBA:
