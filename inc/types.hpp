@@ -17,6 +17,10 @@ union RGBA {
     };
 #pragma GCC diagnostic pop
 
+    V4f v4f() const;
+
+    static RGBA from_v4f(const V4f &u);
+
     static RGBA mix(const RGBA &u, const RGBA &v, float t);
     static RGBA bary(                                //
         const RGBA &u, const RGBA &v, const RGBA &w, //
