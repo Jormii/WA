@@ -26,6 +26,11 @@ union RGBA {
 
 static_assert(sizeof(RGBA) == sizeof(u32));
 
+struct PointLight {
+    V3f point;
+    V4f color;
+};
+
 #pragma endregion
 
 #pragma region function

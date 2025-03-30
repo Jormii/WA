@@ -128,6 +128,10 @@ const Buf<M4f> &VAO::unif_m4f(i32 unif_idx) const {
     return __UNIF_GET(M4f, unif_idx);
 }
 
+const Buf<PointLight> &VAO::unif_point_light(i32 unif_idx) const {
+    return __UNIF_GET(PointLight, unif_idx);
+}
+
 #undef __UNIF_GET
 
 const VAOBuf &VAO::__get_unif(i32 unif_idx, VAOType type) const {

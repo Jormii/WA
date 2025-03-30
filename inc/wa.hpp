@@ -29,6 +29,7 @@ enum class VAOType {
     V4f,
     M4f,
     RGBA,
+    PointLight,
 };
 
 enum class FrontFace {
@@ -81,6 +82,7 @@ struct VAO {
 
     const Buf<V3f> &unif_v3f(i32 unif_idx) const;
     const Buf<M4f> &unif_m4f(i32 unif_idx) const;
+    const Buf<PointLight> &unif_point_light(i32 unif_idx) const;
     const VAOBuf &__get_unif(i32 unif_idx, VAOType type) const;
 
     V3f &out_v3f(i32 out_idx, i32 tri_v_idx) const;
