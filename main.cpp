@@ -125,6 +125,7 @@ int main() {
         {255, 255, 255, 255},
     };
 
+    FrontFace front_face = FrontFace::CCW;
     V3i triangles_[] = {
         {0, 1, 2},
         {3, 4, 5},
@@ -213,7 +214,7 @@ int main() {
         vao.buf(BUF_MV, &mv, 1);
         vao.buf(BUF_NM, &nM, 1);
         vao.buf(BUF_MVP, &mvp, 1);
-        wa_render(vao, triangles, vertex_sh, fragment_sh);
+        wa_render(vao, triangles, front_face, vertex_sh, fragment_sh);
 
         wa_swap_bufs();
         sceDisplayWaitVblankStart();

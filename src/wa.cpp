@@ -433,9 +433,9 @@ M4f wa_perspective_fov(float fov, float n, float f) {
     return wa_perspective(-r, r, -t, t, n, f);
 }
 
-void wa_render(                                      //
-    const VAO &vao, const Buf<V3i> triangles,        //
-    VertexSh_fp vertex_sh, FragmentSh_fp fragment_sh //
+void wa_render(                                                            //
+    const VAO &vao, const Buf<V3i> triangles,                              //
+    FrontFace front_face, VertexSh_fp vertex_sh, FragmentSh_fp fragment_sh //
 ) {
     UNTESTED("void wa_render()")
 
@@ -447,18 +447,49 @@ void wa_render(                                      //
     M3f w = wa_viewport();
 
     for (i32 i = 0; i < triangles.len; ++i) {
-        V3f screen[3];
+        V3f canonical[3];
         const V3i &triangle = triangles[i];
 
         for (i32 tri_v_idx = 0; tri_v_idx < triangle.len(); ++tri_v_idx) {
             i32 v_idx = triangle[tri_v_idx];
             VertexShOut out = vertex_sh(v_idx, tri_v_idx, vao);
 
-            V3f canonical = persp_div(out.vertex);
-            V3f canonical_xy = {canonical.x(), canonical.y(), 1};
+            canonical[tri_v_idx] = persp_div(out.vertex);
+        }
 
-            screen[tri_v_idx] = w * canonical_xy;
-            screen[tri_v_idx].z() = canonical.z();
+        i32 cull = 0;
+        switch (front_face) {
+        case FrontFace::CW: {
+            V3f u = canonical[1] - canonical[0];
+            V3f v = canonical[2] - canonical[1];
+            V3f cross = V3f::cross(u, v);
+            float dot = -cross.z(); // NOTE: dot(cross, {0,0,-1})
+            cull = dot <= 0;
+        } break;
+        case FrontFace::CCW: {
+            V3f u = canonical[2] - canonical[0];
+            V3f v = canonical[1] - canonical[2];
+            V3f cross = V3f::cross(u, v);
+            float dot = -cross.z(); // NOTE: dot(cross, {0,0,-1})
+            cull = dot <= 0;
+        } break;
+        case FrontFace::BACKFACE:
+            break;
+        default:
+            MUST(0 && (i32)front_face);
+        }
+
+        if (cull) {
+            continue;
+        }
+
+        V3f screen[3];
+        for (i32 i = 0; i < 3; ++i) {
+            V3f vertex = canonical[i];
+            V3f vertex_xy1 = {vertex.x(), vertex.y(), 1};
+
+            screen[i] = w * vertex_xy1;
+            screen[i].z() = vertex.z();
         }
 
         float x0, y0;
