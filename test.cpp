@@ -22,8 +22,12 @@ extern i32 MAX_test(void);
 extern i32 C_ARR_LEN_test(void);
 extern i32 C_ARR_LEN_NULL_test(void);
 extern i32 C_ARR_LEN_arg_ptr_test(void);
+extern i32 MEMBER_OFFSET_test(void);
 extern i32 c_arr_check_test(void);
 extern i32 c_arr_idx_check_test(void);
+extern i32 c_arr_2d_idx_test(void);
+extern i32 c_arr_2d_check_test(void);
+extern i32 c_arr_2d_idx_check_test(void);
 #ifdef __cplusplus
 }
 #endif
@@ -34,6 +38,7 @@ extern i32 Buf_end_test(void);
 extern i32 Buf_operator_indirect_test(void);
 extern i32 Buf_operator_subscript_test(void);
 extern i32 Buf_operator_add_test(void);
+extern i32 Buf2D_get_test(void);
 extern i32 Arr_len_test(void);
 extern i32 Arr_mag_test(void);
 extern i32 Arr_norm_test(void);
@@ -58,6 +63,9 @@ extern i32 Arr_operator_div_test(void);
 extern i32 Arr_operator_sub_test(void);
 extern i32 Arr_operator_eq_test(void);
 extern i32 Arr_operator_mul_test(void);
+extern i32 Arr2D_rows_test(void);
+extern i32 Arr2D_cols_test(void);
+extern i32 Arr2D_buf2d_test(void);
 extern i32 Mat_n_test(void);
 extern i32 Mat_len_test(void);
 extern i32 Mat_det_test(void);
@@ -117,7 +125,7 @@ extern i32 __VFPU_deinit_test(void);
 
 int main(void) {
 	i32 passed = 0;
-	const i32 N_TESTS = 90;
+	const i32 N_TESTS = 98;
 
 	testing_started_cb();
 
@@ -127,8 +135,12 @@ int main(void) {
 	passed += test_function_cb(C_ARR_LEN_test, "C_ARR_LEN_test");
 	passed += test_function_cb(C_ARR_LEN_NULL_test, "C_ARR_LEN_NULL_test");
 	passed += test_function_cb(C_ARR_LEN_arg_ptr_test, "C_ARR_LEN_arg_ptr_test");
+	passed += test_function_cb(MEMBER_OFFSET_test, "MEMBER_OFFSET_test");
 	passed += test_function_cb(c_arr_check_test, "c_arr_check_test");
 	passed += test_function_cb(c_arr_idx_check_test, "c_arr_idx_check_test");
+	passed += test_function_cb(c_arr_2d_idx_test, "c_arr_2d_idx_test");
+	passed += test_function_cb(c_arr_2d_check_test, "c_arr_2d_check_test");
+	passed += test_function_cb(c_arr_2d_idx_check_test, "c_arr_2d_idx_check_test");
 
 	test_file_cb("C-CPP-CodeBase/tests/cpp.cpp");
 	passed += test_function_cb(SWAP_test, "SWAP_test");
@@ -136,6 +148,7 @@ int main(void) {
 	passed += test_function_cb(Buf_operator_indirect_test, "Buf_operator_indirect_test");
 	passed += test_function_cb(Buf_operator_subscript_test, "Buf_operator_subscript_test");
 	passed += test_function_cb(Buf_operator_add_test, "Buf_operator_add_test");
+	passed += test_function_cb(Buf2D_get_test, "Buf2D_get_test");
 	passed += test_function_cb(Arr_len_test, "Arr_len_test");
 	passed += test_function_cb(Arr_mag_test, "Arr_mag_test");
 	passed += test_function_cb(Arr_norm_test, "Arr_norm_test");
@@ -160,6 +173,9 @@ int main(void) {
 	passed += test_function_cb(Arr_operator_sub_test, "Arr_operator_sub_test");
 	passed += test_function_cb(Arr_operator_eq_test, "Arr_operator_eq_test");
 	passed += test_function_cb(Arr_operator_mul_test, "Arr_operator_mul_test");
+	passed += test_function_cb(Arr2D_rows_test, "Arr2D_rows_test");
+	passed += test_function_cb(Arr2D_cols_test, "Arr2D_cols_test");
+	passed += test_function_cb(Arr2D_buf2d_test, "Arr2D_buf2d_test");
 	passed += test_function_cb(Mat_n_test, "Mat_n_test");
 	passed += test_function_cb(Mat_len_test, "Mat_len_test");
 	passed += test_function_cb(Mat_det_test, "Mat_det_test");
