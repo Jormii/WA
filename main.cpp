@@ -13,8 +13,6 @@
 
 enum __VAOBuf {
     BUF_V,
-    BUF_MV,
-    BUF_NM,
     BUF_MVP,
     BUF_POINT_LIGHTS,
     __BUF_CNT,
@@ -28,8 +26,6 @@ enum __VAOIn {
 };
 
 enum __VAOUnif {
-    UNIF_MV,
-    UNIF_NM,
     UNIF_MVP,
     UNIF_POINT_LIGHTS,
     __UNIF_CNT,
@@ -55,20 +51,15 @@ int callback_thread(SceSize args, void *argp);
 int exit_callback(int arg1, int arg2, void *common);
 
 VertexShOut vertex_sh(i32 v_idx, i32 tri_v_idx, const VAO &vao) {
-    const M4f &nM = *vao.unif_m4f(UNIF_NM);
     const M4f &mvp = *vao.unif_m4f(UNIF_MVP);
     const V3f &vertex = vao.in_v3f(IN_V, v_idx);
     const V3f &normal = vao.in_v3f(IN_N, v_idx);
     const RGBA &color = vao.in_rgba(IN_COLOR, v_idx);
 
-    V4f v_homo = v4_point(vertex);
-    V4f n_homo = v4_vector(normal);
-
-    V4f nM_n = nM * n_homo;
-    V4f mvp_v = mvp * v_homo;
+    V4f mvp_v = mvp * v4_point(vertex);
 
     vao.out_v3f(OUT_V, tri_v_idx) = vertex;
-    vao.out_v3f(OUT_N, tri_v_idx) = nM_n.xyz();
+    vao.out_v3f(OUT_N, tri_v_idx) = normal;
     vao.out_v4f(OUT_COLOR, tri_v_idx) = color.v4f();
 
     return {mvp_v};
@@ -123,10 +114,10 @@ int main() {
         {-0.8402, 0.2425, -0.4851},
     };
     RGBA colors[]{
-        {255, 0, 0, 255},
-        {0, 255, 0, 255},
-        {0, 0, 255, 255},
-        {255, 255, 255, 255},
+        g, // {255, 0, 0, 255},
+        g, // {0, 255, 0, 255},
+        g, // {0, 0, 255, 255},
+        g, // {255, 255, 255, 255},
     };
 
     FrontFace front_face = FrontFace::CCW;
@@ -154,11 +145,11 @@ int main() {
         {positions[0], normals[3], colors[0]},
     };
 
-    float pl_w = 2;
-    float pl_y = -1;
+    float pl_w = 1.2f;
+    float pl_y = -1.0f;
     V3f pl_n = {0, 1, 0};
     RGBA pl_rgba = {0, 0, 0, 0};
-    FrontFace front_face_pl = FrontFace::CCW; // TODO: These might be wrong
+    FrontFace front_face_pl = FrontFace::CCW;
     V3i triangles_pl_[] = {
         {0, 1, 2},
         {2, 3, 0},
@@ -193,9 +184,6 @@ int main() {
     Buf<PointLight> lights = BUF_FROM_C_ARR(lights_);
 
     vao.buf(BUF_POINT_LIGHTS, lights.ptr, lights.len);
-
-    vao.unif(BUF_MV, UNIF_MV, VAOType::M4f);
-    vao.unif(BUF_NM, UNIF_NM, VAOType::M4f);
     vao.unif(BUF_MVP, UNIF_MVP, VAOType::M4f);
     vao.unif(BUF_POINT_LIGHTS, UNIF_POINT_LIGHTS, VAOType::PointLight);
     vao.in(                //
@@ -237,12 +225,8 @@ int main() {
         VFPU_ALIGNED M4f v = wa_look_at(eye, at, up);
         VFPU_ALIGNED M4f mv = v * m;
         VFPU_ALIGNED M4f mvp = p * mv;
-        VFPU_ALIGNED M4f nM = mv.inverse().trans();
 
-        vao.buf(BUF_MV, &mv, 1);
-        vao.buf(BUF_NM, &nM, 1);
         vao.buf(BUF_MVP, &mvp, 1);
-
         vao.buf(BUF_V, vertices.ptr, vertices.len);
         wa_render(vao, triangles, front_face, vertex_sh, fragment_sh);
 
