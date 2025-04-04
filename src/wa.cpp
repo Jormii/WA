@@ -85,6 +85,7 @@ void VAO::__make_bary(float alpha, float beta, float gamma) const {
             );
             break;
         default:
+            fprintf(stderr, "%ld\n", (i32)type);
             MUST(0 && (i32)type);
             break;
         }
@@ -248,6 +249,7 @@ i32 VAO::size(VAOType type) {
     case VAOType::RGBA:
         return sizeof(RGBA);
     default:
+        fprintf(stderr, "%ld\n", (i32)type);
         MUST(0 && (i32)type);
         return 0;
     }
@@ -310,7 +312,6 @@ VAO VAO::alloc(i32 n_bufs, i32 n_ins, i32 n_unifs, Buf<VAOType> outs_ts) {
 }
 
 i32 wa_init() {
-    UNTESTED("i32 wa_init()");
     ASSERTZ(!initialized);
 
     z_buf = (float *)malloc(FRAME_BUF_SIZE * sizeof(float));
@@ -330,8 +331,6 @@ void wa_clear(RGBA color) {
 #define CLEAR_MAT 0
 #define CLEAR_RGBA_ROW 0
 #define CLEAR_Z_ROW 1
-
-    UNTESTED("void wa_clear(RGBA color)");
 
     prof_kick(SLOT_WA_CLEAR);
 
@@ -370,8 +369,6 @@ void wa_swap_bufs() {
 }
 
 i32 wa_buf_in(float x, float y) {
-    UNTESTED("i32 wa_buf_in(float x, float y)");
-
     i32 in = x >= VIEWPORT_LEFT && x <= VIEWPORT_RIGHT //
              && y >= VIEWPORT_TOP && y <= VIEWPORT_BOTTOM;
 
@@ -379,7 +376,6 @@ i32 wa_buf_in(float x, float y) {
 }
 
 i32 wa_buf_idx(float x, float y) {
-    UNTESTED("i32 wa_buf_idx(float x, float y)");
     MUST(wa_buf_in(x, y));
 
     i32 idx = round(x + 0.5f) + round(y + 0.5f) * FRAME_BUF_WIDTH;
@@ -388,14 +384,9 @@ i32 wa_buf_idx(float x, float y) {
     return idx;
 }
 
-V3f wa_up() {
-    UNTESTED("V3f wa_up()");
-    return {0.0f, 1.0f, 0.0f};
-}
+V3f wa_up() { return {0.0f, 1.0f, 0.0f}; }
 
 M3f wa_viewport() {
-    UNTESTED("M3f wa_viewport()");
-
     float w2 = 0.5f * (SCREEN_WIDTH - 1);
     float h2 = 0.5f * (SCREEN_HEIGHT - 1);
 
@@ -409,8 +400,6 @@ M3f wa_viewport() {
 }
 
 M4f wa_look_at(V3f eye, V3f at, V3f up) {
-    UNTESTED("M4f wa_look_at(V3f eye, V3f at, V3f up)");
-
     MUST(eye != at);
     MUST(!eq(up.mag(), 0.0f));
 
@@ -430,8 +419,6 @@ M4f wa_look_at(V3f eye, V3f at, V3f up) {
 }
 
 M4f wa_orthographic(float l, float r, float b, float t, float n, float f) {
-    UNTESTED("M4f wa_orthographic(...)");
-
     MUST(l < r);
     MUST(b < t);
     MUST(n > 0 && n < f);
@@ -451,8 +438,6 @@ M4f wa_orthographic(float l, float r, float b, float t, float n, float f) {
 }
 
 M4f wa_perspective(float l, float r, float b, float t, float n, float f) {
-    UNTESTED("M4f wa_perspective(...)")
-
     MUST(l < r);
     MUST(b < t);
     MUST(n > 0 && n < f);
@@ -470,8 +455,6 @@ M4f wa_perspective(float l, float r, float b, float t, float n, float f) {
 }
 
 M4f wa_perspective_fov(float fov, float n, float f) {
-    UNTESTED("M4f wa_perspective_fov(float fov, float n, float f)")
-
     MUST(fov > 0 && fov < M_PI_2);
     MUST(n > 0 && n < f);
 
@@ -485,8 +468,6 @@ void wa_render(                                                            //
     const VAO &vao, const Buf<V3i> triangles,                              //
     FrontFace front_face, VertexSh_fp vertex_sh, FragmentSh_fp fragment_sh //
 ) {
-    UNTESTED("void wa_render()")
-
     MUST(vertex_sh != NULL);
     MUST(fragment_sh != NULL);
 
@@ -598,13 +579,10 @@ void wa_render(                                                            //
 }
 
 float wa_fline(float x, float y, float px, float py, float qx, float qy) {
-    UNTESTED("float wa_fline(...)")
     return (py - qy) * x + (qx - px) * y + px * qy - qx * py;
 }
 
 void wa_draw_line(float x0, float y0, float xf, float yf, RGBA c0, RGBA cf) {
-    UNTESTED("void wa_draw_line(...)");
-
     V2f p = {x0, y0};
     V2f q = {xf, yf};
     float dx = abs(xf - x0);
