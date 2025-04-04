@@ -60,6 +60,12 @@ void VAO::__make_bary(float alpha, float beta, float gamma) const {
         const void *g = __get_out(out_idx, 2, type);
 
         switch (type) {
+        case VAOType::V2f:
+            *((V2f *)ptr) = V2f::bary(                 //
+                *((V2f *)a), *((V2f *)b), *((V2f *)g), //
+                alpha, beta, gamma                     //
+            );
+            break;
         case VAOType::V3f:
             *((V3f *)ptr) = V3f::bary(                 //
                 *((V3f *)a), *((V3f *)b), *((V3f *)g), //
@@ -87,6 +93,10 @@ void VAO::__make_bary(float alpha, float beta, float gamma) const {
 
 #define __IN_GET(RET_T, idx, v_idx)                                            \
     *(RET_T *)(__get_in(idx, v_idx, VAOType::RET_T))
+
+const V2f &VAO::in_v2f(i32 in_idx, i32 v_idx) const {
+    return __IN_GET(V2f, in_idx, v_idx);
+}
 
 const V3f &VAO::in_v3f(i32 in_idx, i32 v_idx) const {
     return __IN_GET(V3f, in_idx, v_idx);
@@ -128,6 +138,14 @@ const Buf<M4f> &VAO::unif_m4f(i32 unif_idx) const {
     return __UNIF_GET(M4f, unif_idx);
 }
 
+const Buf<RGBA> &VAO::unif_rgba(i32 unif_idx) const {
+    return __UNIF_GET(RGBA, unif_idx);
+}
+
+const Buf<Texture> &VAO::unif_texture(i32 unif_idx) const {
+    return __UNIF_GET(Texture, unif_idx);
+}
+
 const Buf<PointLight> &VAO::unif_point_light(i32 unif_idx) const {
     return __UNIF_GET(PointLight, unif_idx);
 }
@@ -149,6 +167,10 @@ const VAOBuf &VAO::__get_unif(i32 unif_idx, VAOType type) const {
 
 #define __OUT_GET(RET_T, idx, t_v_idx)                                         \
     *(RET_T *)(__get_out(idx, t_v_idx, VAOType::RET_T))
+
+V2f &VAO::out_v2f(i32 out_idx, i32 tri_v_idx) const {
+    return __OUT_GET(V2f, out_idx, tri_v_idx);
+}
 
 V3f &VAO::out_v3f(i32 out_idx, i32 tri_v_idx) const {
     return __OUT_GET(V3f, out_idx, tri_v_idx);
@@ -182,6 +204,10 @@ void *VAO::__get_out(i32 out_idx, i32 tri_v_idx, VAOType type) const {
 #define __OUT_BARY_GET(RET_T, idx)                                             \
     *(RET_T *)(__get_out_bary(idx, VAOType::RET_T))
 
+const V2f &VAO::out_bary_v2f(i32 out_idx) const {
+    return __OUT_BARY_GET(V2f, out_idx);
+}
+
 const V3f &VAO::out_bary_v3f(i32 out_idx) const {
     return __OUT_BARY_GET(V3f, out_idx);
 }
@@ -211,6 +237,8 @@ void *VAO::__get_out_bary(i32 out_idx, VAOType type) const {
 
 i32 VAO::size(VAOType type) {
     switch (type) {
+    case VAOType::V2f:
+        return sizeof(V2f);
     case VAOType::V3f:
         return sizeof(V3f);
     case VAOType::V4f:

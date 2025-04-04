@@ -30,6 +30,11 @@ union RGBA {
 
 static_assert(sizeof(RGBA) == sizeof(u32));
 
+using Texture = Buf2D<RGBA>;
+
+RGBA texture_sample(const V2f &uv, const Texture &texture);
+RGBA texture_sample(float u, float v, const Texture &texture);
+
 struct PointLight {
     V3f point;
     V4f color;

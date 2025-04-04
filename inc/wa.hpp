@@ -25,10 +25,13 @@ enum ProfSlots {
 };
 
 enum class VAOType {
+    V2f,
     V3f,
     V4f,
     M4f,
     RGBA,
+
+    Texture,
     PointLight,
 };
 
@@ -76,20 +79,25 @@ struct VAO {
     void unif(i32 buf_idx, i32 unif_idx, VAOType type);
     void __make_bary(float alpha, float beta, float gamma) const;
 
+    const V2f &in_v2f(i32 in_idx, i32 v_idx) const;
     const V3f &in_v3f(i32 in_idx, i32 v_idx) const;
     const RGBA &in_rgba(i32 in_idx, i32 v_idx) const;
     const void *__get_in(i32 in_idx, i32 v_idx, VAOType type) const;
 
     const Buf<V3f> &unif_v3f(i32 unif_idx) const;
     const Buf<M4f> &unif_m4f(i32 unif_idx) const;
+    const Buf<RGBA> &unif_rgba(i32 unif_idx) const;
+    const Buf<Texture> &unif_texture(i32 unif_idx) const;
     const Buf<PointLight> &unif_point_light(i32 unif_idx) const;
     const VAOBuf &__get_unif(i32 unif_idx, VAOType type) const;
 
+    V2f &out_v2f(i32 out_idx, i32 tri_v_idx) const;
     V3f &out_v3f(i32 out_idx, i32 tri_v_idx) const;
     V4f &out_v4f(i32 out_idx, i32 tri_v_idx) const;
     RGBA &out_rgba(i32 out_idx, i32 tri_v_idx) const;
     void *__get_out(i32 out_idx, i32 tri_v_idx, VAOType type) const;
 
+    const V2f &out_bary_v2f(i32 out_idx) const;
     const V3f &out_bary_v3f(i32 out_idx) const;
     const V4f &out_bary_v4f(i32 out_idx) const;
     const RGBA &out_bary_rgba(i32 out_idx) const;

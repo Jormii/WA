@@ -33,4 +33,28 @@ RGBA RGBA::bary(                                 //
     return bary;
 }
 
+RGBA texture_sample(const V2f &uv, const Texture &texture) {
+    return texture_sample(uv.x(), uv.y(), texture);
+}
+
+RGBA texture_sample(float u, float v, const Texture &texture) {
+    MUST(u >= 0);
+    MUST(u <= 1);
+    MUST(v >= 0);
+    MUST(v <= 1);
+
+    i32 i = roundf((1 - v) * texture.rows);
+    i32 j = roundf(u * texture.cols);
+
+    if (i >= texture.rows) {
+        i -= texture.rows;
+    }
+    if (j >= texture.cols) {
+        j -= texture.cols;
+    }
+
+    RGBA color = texture.get(i, j);
+    return color;
+}
+
 #pragma endregion
