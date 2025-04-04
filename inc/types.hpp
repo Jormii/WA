@@ -49,6 +49,9 @@ template <typename T>
 V3f persp_div(const V4<T> &u);
 
 template <typename T>
+M4f normal_m(const M4<T> &mv);
+
+template <typename T>
 M4<T> rotation_m(const V3<T> &x, const V3<T> &y, const V3<T> &z);
 
 template <typename T>
@@ -82,6 +85,11 @@ V3f persp_div(const V4<T> &u) {
 
     V3f persp_div_ = u.xyz() / (float)w;
     return persp_div_;
+}
+
+template <typename T>
+M4f normal_m(const M4<T> &mv) {
+    return mv.inverse().trans();
 }
 
 template <typename T>
