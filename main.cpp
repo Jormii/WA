@@ -11,14 +11,19 @@
 #include "vfpu.hpp"
 #include "wa.hpp"
 
+#include "tex.png.hpp"
+
 enum __VAOBuf {
     BUF_V,
     BUF_MVP,
+    BUF_TEXTURE,
+    BUF_TEXTURE_COLORS,
     BUF_POINT_LIGHTS,
     __BUF_CNT,
 };
 
 enum __VAOIn {
+    IN_UV,
     IN_V,
     IN_N,
     IN_COLOR,
@@ -27,11 +32,14 @@ enum __VAOIn {
 
 enum __VAOUnif {
     UNIF_MVP,
+    UNIF_TEXTURE,
+    UNIF_TEXTURE_COLORS,
     UNIF_POINT_LIGHTS,
     __UNIF_CNT,
 };
 
 enum __VAOOut {
+    OUT_UV,
     OUT_V,
     OUT_N,
     OUT_COLOR,
@@ -39,6 +47,7 @@ enum __VAOOut {
 };
 
 struct Vertex {
+    V2f uv;
     V3f vertex;
     V3f normal;
     RGBA color;
@@ -52,12 +61,14 @@ int exit_callback(int arg1, int arg2, void *common);
 
 VertexShOut vertex_sh(i32 v_idx, i32 tri_v_idx, const VAO &vao) {
     const M4f &mvp = *vao.unif_m4f(UNIF_MVP);
+    const V2f &uv = vao.in_v2f(IN_UV, v_idx);
     const V3f &vertex = vao.in_v3f(IN_V, v_idx);
     const V3f &normal = vao.in_v3f(IN_N, v_idx);
     const RGBA &color = vao.in_rgba(IN_COLOR, v_idx);
 
     V4f mvp_v = mvp * v4_point(vertex);
 
+    vao.out_v2f(OUT_UV, tri_v_idx) = uv;
     vao.out_v3f(OUT_V, tri_v_idx) = vertex;
     vao.out_v3f(OUT_N, tri_v_idx) = normal;
     vao.out_v4f(OUT_COLOR, tri_v_idx) = color.v4f();
@@ -66,13 +77,28 @@ VertexShOut vertex_sh(i32 v_idx, i32 tri_v_idx, const VAO &vao) {
 }
 
 FragmentShOut fragment_sh(const VAO &vao) {
-    const Buf<PointLight> lights = vao.unif_point_light(UNIF_POINT_LIGHTS);
+    const Texture &texture = *vao.unif_texture(UNIF_TEXTURE);
+    const Buf<RGBA> &texture_colors = vao.unif_rgba(UNIF_TEXTURE_COLORS);
+    const Buf<PointLight> &lights = vao.unif_point_light(UNIF_POINT_LIGHTS);
+    const V2f &uv = vao.out_bary_v2f(OUT_UV);
     const V3f &vertex = vao.out_bary_v3f(OUT_V);
     const V3f &normal = vao.out_bary_v3f(OUT_N);
-    const V4f &color = vao.out_bary_v4f(OUT_COLOR);
+    // const V4f &color = vao.out_bary_v4f(OUT_COLOR);
+
+    V4f r = texture_colors[0].v4f();
+    V4f g = texture_colors[1].v4f();
+    V4f b = texture_colors[2].v4f();
+    V4f mask = texture_sample(uv, texture).v4f();
+
+    M4f m = {
+        r.x(), r.y(), r.z(), r.w(), //
+        g.x(), g.y(), g.z(), g.w(), //
+        b.x(), b.y(), b.z(), b.w(), //
+        1,     1,     1,     1,     //
+    };
+    V4f color_v4f = m * mask;
 
     V3f n = normal.norm();
-    V4f color_v4f = color;
     for (i32 i = 0; i < lights.len; ++i) {
         const PointLight &light = lights[i];
 
@@ -101,6 +127,12 @@ int main() {
     V3f at = {0, 0, 0};
     V3f up = wa_up();
 
+    V2f uvs[] = {
+        {0.997998, 0.501001}, {0.001001, 0.997998}, {0.001001, 0.501001},
+        {0.997998, 0.001001}, {0.001001, 0.001001}, {0.001001, 0.497998},
+        {0.002002, 0.998999}, {0.998999, 0.502002}, {0.998999, 0.998999},
+        {0.002002, 0.498999}, {0.998999, 0.002002}, {0.998999, 0.498999},
+    };
     V3f positions[] = {
         {0.000000, -1.000000, -1.000000},
         {0.866025, -1.000000, 0.500000},
@@ -114,10 +146,10 @@ int main() {
         {-0.8402, 0.2425, -0.4851},
     };
     RGBA colors[]{
-        g, // {255, 0, 0, 255},
-        g, // {0, 255, 0, 255},
-        g, // {0, 0, 255, 255},
-        g, // {255, 255, 255, 255},
+        {0, 0, 0, 0}, // {255, 0, 0, 255},
+        {0, 0, 0, 0}, // {0, 255, 0, 255},
+        {0, 0, 0, 0}, // {0, 0, 255, 255},
+        {0, 0, 0, 0}, // {255, 255, 255, 255},
     };
 
     FrontFace front_face = FrontFace::CCW;
@@ -128,21 +160,21 @@ int main() {
         {9, 10, 11},
     };
     Vertex vertices_[] = {
-        {positions[0], normals[0], colors[0]},
-        {positions[3], normals[0], colors[3]},
-        {positions[1], normals[0], colors[1]},
+        {uvs[0], positions[0], normals[0], colors[0]},
+        {uvs[1], positions[3], normals[0], colors[3]},
+        {uvs[2], positions[1], normals[0], colors[1]},
         //
-        {positions[0], normals[1], colors[0]},
-        {positions[1], normals[1], colors[1]},
-        {positions[2], normals[1], colors[2]},
+        {uvs[3], positions[0], normals[1], colors[0]},
+        {uvs[4], positions[1], normals[1], colors[1]},
+        {uvs[5], positions[2], normals[1], colors[2]},
         //
-        {positions[1], normals[2], colors[1]},
-        {positions[3], normals[2], colors[3]},
-        {positions[2], normals[2], colors[2]},
+        {uvs[6], positions[1], normals[2], colors[1]},
+        {uvs[7], positions[3], normals[2], colors[3]},
+        {uvs[8], positions[2], normals[2], colors[2]},
         //
-        {positions[2], normals[3], colors[2]},
-        {positions[3], normals[3], colors[3]},
-        {positions[0], normals[3], colors[0]},
+        {uvs[9], positions[2], normals[3], colors[2]},
+        {uvs[10], positions[3], normals[3], colors[3]},
+        {uvs[11], positions[0], normals[3], colors[0]},
     };
 
     float pl_w = 1.2f;
@@ -155,10 +187,10 @@ int main() {
         {2, 3, 0},
     };
     Vertex vertices_pl_[] = {
-        {{-pl_w, pl_y, -pl_w}, pl_n, pl_rgba},
-        {{-pl_w, pl_y, pl_w}, pl_n, pl_rgba},
-        {{pl_w, pl_y, pl_w}, pl_n, pl_rgba},
-        {{pl_w, pl_y, -pl_w}, pl_n, pl_rgba},
+        {{0, 1}, {-pl_w, pl_y, -pl_w}, pl_n, pl_rgba},
+        {{0, 0}, {-pl_w, pl_y, pl_w}, pl_n, pl_rgba},
+        {{1, 0}, {pl_w, pl_y, pl_w}, pl_n, pl_rgba},
+        {{1, 1}, {pl_w, pl_y, -pl_w}, pl_n, pl_rgba},
     };
 
     VFPU_ALIGNED M4f m = M4f::I();
@@ -172,34 +204,55 @@ int main() {
     i32 n_bufs = __BUF_CNT;
     i32 n_ins = __IN_CNT;
     i32 n_unifs = __UNIF_CNT;
-    VAOType outs_ts_[] = {VAOType::V3f, VAOType::V3f, VAOType::V4f};
+    VAOType outs_ts_[] = {
+        VAOType::V2f, //
+        VAOType::V3f, //
+        VAOType::V3f, //
+        VAOType::V4f, //
+    };
     static_assert(C_ARR_LEN(outs_ts_) == __OUT_CNT);
 
     Buf<VAOType> outs_ts = BUF_FROM_C_ARR(outs_ts_);
     VAO vao = VAO::alloc(n_bufs, n_ins, n_unifs, outs_ts);
 
+    Texture texture = tex_texture.buf2d();
+
+    RGBA texture_colors_[] = {
+        {123, 45, 67, 0},
+        {89, 123, 45, 0},
+        {67, 89, 123, 0},
+    };
+    Buf<RGBA> texture_colors = BUF_FROM_C_ARR(texture_colors_);
+
     PointLight lights_[] = {
-        {{2.0f, 2.0f, 2.0f}, {1, 0, 0, 0}},
+        {{2.0f, 2.0f, 2.0f}, {0.5, 0.5, 0.5, 0}},
     };
     Buf<PointLight> lights = BUF_FROM_C_ARR(lights_);
 
+    vao.buf(BUF_TEXTURE, &texture, 1);
+    vao.buf(BUF_TEXTURE_COLORS, texture_colors.ptr, texture_colors.len);
     vao.buf(BUF_POINT_LIGHTS, lights.ptr, lights.len);
+
     vao.unif(BUF_MVP, UNIF_MVP, VAOType::M4f);
+    vao.unif(BUF_TEXTURE, UNIF_TEXTURE, VAOType::Texture);
+    vao.unif(BUF_TEXTURE_COLORS, UNIF_TEXTURE_COLORS, VAOType::RGBA);
     vao.unif(BUF_POINT_LIGHTS, UNIF_POINT_LIGHTS, VAOType::PointLight);
-    vao.in(                //
-        BUF_V, IN_V,       //
-        0, sizeof(Vertex), //
-        VAOType::V3f       //
+
+    vao.in(                                                     //
+        BUF_V, IN_UV,                                           //
+        MEMBER_OFFSET(Vertex, uv), sizeof(Vertex), VAOType::V2f //
     );
-    vao.in(                                     //
-        BUF_V, IN_N,                            //
-        sizeof(Vertex::vertex), sizeof(Vertex), //
-        VAOType::V3f                            //
+    vao.in(                                                         //
+        BUF_V, IN_V,                                                //
+        MEMBER_OFFSET(Vertex, vertex), sizeof(Vertex), VAOType::V3f //
     );
-    vao.in(                                                              //
-        BUF_V, IN_COLOR,                                                 //
-        sizeof(Vertex::vertex) + sizeof(Vertex::normal), sizeof(Vertex), //
-        VAOType::RGBA                                                    //
+    vao.in(                                                         //
+        BUF_V, IN_N,                                                //
+        MEMBER_OFFSET(Vertex, normal), sizeof(Vertex), VAOType::V3f //
+    );
+    vao.in(                                                         //
+        BUF_V, IN_COLOR,                                            //
+        MEMBER_OFFSET(Vertex, color), sizeof(Vertex), VAOType::RGBA //
     );
 
     setup_callbacks();
@@ -227,6 +280,7 @@ int main() {
         VFPU_ALIGNED M4f mvp = p * mv;
 
         vao.buf(BUF_MVP, &mvp, 1);
+
         vao.buf(BUF_V, vertices.ptr, vertices.len);
         wa_render(vao, triangles, front_face, vertex_sh, fragment_sh);
 
