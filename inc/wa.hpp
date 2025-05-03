@@ -126,7 +126,9 @@ void wa_clear_depth(float *ptr, i32 len);
 void wa_swap_bufs();
 
 [[nodiscard]] i32 wa_buf_in(float x, float y);
+[[nodiscard]] i32 wa_buf_in(float x, float y, i32 rows, i32 cols);
 i32 wa_buf_idx(float x, float y);
+i32 wa_buf_idx(float x, float y, i32 rows, i32 cols);
 
 V3f wa_up();
 M3f wa_viewport();

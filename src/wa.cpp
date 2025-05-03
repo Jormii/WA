@@ -388,11 +388,34 @@ i32 wa_buf_in(float x, float y) {
     return in;
 }
 
+i32 wa_buf_in(float x, float y, i32 rows, i32 cols) {
+    MUST(rows >= 0);
+    MUST(cols >= 0);
+
+    float rows_ = (float)(rows - 1) - 0.5f;
+    float cols_ = (float)(cols - 1) - 0.5f;
+
+    i32 in = x >= -0.5f && x <= cols_ //
+             && y >= -0.5f && y <= rows_;
+    return in;
+}
+
 i32 wa_buf_idx(float x, float y) {
     MUST(wa_buf_in(x, y));
 
     i32 idx = round(x + 0.5f) + round(y + 0.5f) * FRAME_BUF_WIDTH;
     MUST(idx >= 0 && idx < FRAME_BUF_SIZE);
+
+    return idx;
+}
+
+i32 wa_buf_idx(float x, float y, i32 rows, i32 cols) {
+    MUST(rows >= 0);
+    MUST(cols >= 0);
+    MUST(wa_buf_in(x, y, rows, cols));
+
+    i32 idx = round(x + 0.5f) + round(y + 0.5f) * cols;
+    MUST(idx >= 0 && idx < (rows * cols));
 
     return idx;
 }
