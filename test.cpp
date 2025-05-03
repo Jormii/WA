@@ -39,6 +39,8 @@ extern i32 Buf_operator_indirect_test(void);
 extern i32 Buf_operator_subscript_test(void);
 extern i32 Buf_operator_add_test(void);
 extern i32 Buf2D_get_test(void);
+extern i32 Buf2D_len_test(void);
+extern i32 Buf2D_operator_subscript_test(void);
 extern i32 Arr_len_test(void);
 extern i32 Arr_mag_test(void);
 extern i32 Arr_norm_test(void);
@@ -125,7 +127,7 @@ extern i32 __VFPU_deinit_test(void);
 
 int main(void) {
 	i32 passed = 0;
-	const i32 N_TESTS = 98;
+	const i32 N_TESTS = 100;
 
 	testing_started_cb();
 
@@ -149,6 +151,8 @@ int main(void) {
 	passed += test_function_cb(Buf_operator_subscript_test, "Buf_operator_subscript_test");
 	passed += test_function_cb(Buf_operator_add_test, "Buf_operator_add_test");
 	passed += test_function_cb(Buf2D_get_test, "Buf2D_get_test");
+	passed += test_function_cb(Buf2D_len_test, "Buf2D_len_test");
+	passed += test_function_cb(Buf2D_operator_subscript_test, "Buf2D_operator_subscript_test");
 	passed += test_function_cb(Arr_len_test, "Arr_len_test");
 	passed += test_function_cb(Arr_mag_test, "Arr_mag_test");
 	passed += test_function_cb(Arr_norm_test, "Arr_norm_test");
