@@ -131,7 +131,7 @@ i32 wa_buf_idx(float x, float y);
 i32 wa_buf_idx(float x, float y, i32 rows, i32 cols);
 
 V3f wa_up();
-M3f wa_viewport();
+M3f wa_viewport(i32 rows, i32 cols);
 M4f wa_look_at(V3f eye, V3f at, V3f up);
 M4f wa_orthographic(float l, float r, float b, float t, float n, float f);
 M4f wa_perspective(float l, float r, float b, float t, float n, float f);

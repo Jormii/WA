@@ -422,9 +422,12 @@ i32 wa_buf_idx(float x, float y, i32 rows, i32 cols) {
 
 V3f wa_up() { return {0.0f, 1.0f, 0.0f}; }
 
-M3f wa_viewport() {
-    float w2 = 0.5f * (SCREEN_WIDTH - 1);
-    float h2 = 0.5f * (SCREEN_HEIGHT - 1);
+M3f wa_viewport(i32 rows, i32 cols) {
+    MUST(rows >= 0);
+    MUST(cols >= 0);
+
+    float w2 = 0.5f * (cols - 1);
+    float h2 = 0.5f * (rows - 1);
 
     M3f m = {
         w2, 0,   w2 - 0.5f, //
@@ -509,7 +512,7 @@ void wa_render(                                                            //
 
     prof_kick(SLOT_WA_RENDER);
 
-    M3f w = wa_viewport();
+    M3f w = wa_viewport(SCREEN_HEIGHT, SCREEN_WIDTH);
 
     for (i32 i = 0; i < triangles.len; ++i) {
         V3f canonical[3];
