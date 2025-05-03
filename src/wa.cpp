@@ -503,9 +503,9 @@ M4f wa_perspective_fov(float fov, float n, float f) {
     return wa_perspective(-r, r, -t, t, n, f);
 }
 
-void wa_render(                                                            //
-    const VAO &vao, const Buf<V3i> triangles,                              //
-    FrontFace front_face, VertexSh_fp vertex_sh, FragmentSh_fp fragment_sh //
+void wa_render(                                                       //
+    const VAO &vao, const Buf<V3i> triangles,                         //
+    FrontFace front, VertexSh_fp vertex_sh, FragmentSh_fp fragment_sh //
 ) {
     MUST(vertex_sh != NULL);
     MUST(fragment_sh != NULL);
@@ -526,7 +526,7 @@ void wa_render(                                                            //
         }
 
         i32 cull = 0;
-        switch (front_face) {
+        switch (front) {
         case FrontFace::CW: {
             V3f u = canonical[1] - canonical[0];
             V3f v = canonical[2] - canonical[1];
@@ -544,7 +544,7 @@ void wa_render(                                                            //
         case FrontFace::BACKFACE:
             break;
         default:
-            MUST(0 && (i32)front_face);
+            MUST(0 && (i32)front);
         }
 
         if (cull) {
@@ -615,6 +615,116 @@ void wa_render(                                                            //
     }
 
     prof_stop(SLOT_WA_RENDER);
+}
+
+void wa_render_shadow(                                     //
+    const VAO &vao, const Buf<V3i> triangles,              //
+    FrontFace front, ShadowSh_fp shadow_sh, PLightS &light //
+) {
+    MUST(shadow_sh != NULL);
+
+    prof_kick(SLOT_WA_RENDER_SHADOW);
+
+    M3f &w = light.w;
+
+    for (i32 i = 0; i < triangles.len; ++i) {
+        V3f canonical[3];
+        const V3i &triangle = triangles[i];
+
+        for (i32 tri_v_idx = 0; tri_v_idx < triangle.len(); ++tri_v_idx) {
+            i32 v_idx = triangle[tri_v_idx];
+            V4f vertex = shadow_sh(v_idx, tri_v_idx, vao, light);
+
+            canonical[tri_v_idx] = persp_div(vertex);
+        }
+
+        i32 cull = 0;
+        switch (front) {
+        case FrontFace::CW: {
+            V3f u = canonical[1] - canonical[0];
+            V3f v = canonical[2] - canonical[1];
+            V3f cross = V3f::cross(u, v);
+            float dot = -cross.z(); // NOTE: dot(cross, {0,0,-1})
+            cull = dot <= 0;
+        } break;
+        case FrontFace::CCW: {
+            V3f u = canonical[2] - canonical[0];
+            V3f v = canonical[1] - canonical[2];
+            V3f cross = V3f::cross(u, v);
+            float dot = -cross.z(); // NOTE: dot(cross, {0,0,-1})
+            cull = dot <= 0;
+        } break;
+        case FrontFace::BACKFACE:
+            break;
+        default:
+            MUST(0 && (i32)front);
+        }
+
+        if (cull) {
+            continue;
+        }
+
+        V3f screen[3];
+        for (i32 i = 0; i < 3; ++i) {
+            V3f vertex = canonical[i];
+            V3f vertex_xy1 = {vertex.x(), vertex.y(), 1};
+
+            screen[i] = w * vertex_xy1;
+            screen[i].z() = vertex.z();
+        }
+
+        float x0, y0;
+        float xf, yf;
+        x0 = xf = screen[0].x();
+        y0 = yf = screen[0].y();
+        for (i32 j = 1; j < 3; ++j) {
+            x0 = min(x0, screen[j].x());
+            xf = max(xf, screen[j].x());
+            y0 = min(y0, screen[j].y());
+            yf = max(yf, screen[j].y());
+        }
+
+        x0 = max(x0, -0.5f);
+        xf = min(xf, (float)(light.depth_map.cols - 1) - 0.5f);
+        y0 = max(y0, -0.5f);
+        yf = min(yf, (float)(light.depth_map.rows - 1) - 0.5f);
+
+        for (float y = y0; y <= yf; ++y) {
+            for (float x = x0; x <= xf; ++x) {
+                const V3f &sx = screen[0];
+                const V3f &sy = screen[1];
+                const V3f &sz = screen[2];
+
+                float alpha =
+                    wa_fline(x, y, sy.x(), sy.y(), sz.x(), sz.y()) /
+                    wa_fline(sx.x(), sx.y(), sy.x(), sy.y(), sz.x(), sz.y());
+                float beta =
+                    wa_fline(x, y, sz.x(), sz.y(), sx.x(), sx.y()) /
+                    wa_fline(sy.x(), sy.y(), sz.x(), sz.y(), sx.x(), sx.y());
+                float gamma = 1 - (alpha + beta);
+
+                if (alpha >= 0 && beta >= 0 && gamma >= 0) {
+                    i32 idx = wa_buf_idx(x, y, light.depth_map.rows,
+                                         light.depth_map.cols);
+
+                    float z = CANONICAL_Z_CLEAR;
+                    bary_v(                        //
+                        &sx.z(), &sy.z(), &sz.z(), //
+                        alpha, beta, gamma,        //
+                        &z, 1                      //
+                    );
+
+                    if (z < CANONICAL_Z_MAX || light.depth_map[idx] <= z) {
+                        continue;
+                    }
+
+                    light.depth_map[idx] = z;
+                }
+            }
+        }
+    }
+
+    prof_stop(SLOT_WA_RENDER_SHADOW);
 }
 
 float wa_fline(float x, float y, float px, float py, float qx, float qy) {

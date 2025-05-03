@@ -22,6 +22,7 @@ enum ProfSlots {
     SLOT_LOOP,
     SLOT_WA_CLEAR,
     SLOT_WA_RENDER,
+    SLOT_WA_RENDER_SHADOW,
 };
 
 enum class VAOType {
@@ -120,6 +121,11 @@ struct FragmentShOut {
 typedef VertexShOut (*VertexSh_fp)(i32 v_idx, i32 tri_v_idx, const VAO &vao);
 typedef FragmentShOut (*FragmentSh_fp)(const VAO &vao);
 
+typedef V4f (*ShadowSh_fp)(                   //
+    i32 v_idx, i32 tri_v_idx, const VAO &vao, //
+    const PLightS &light                      //
+);
+
 [[nodiscard]] i32 wa_init();
 void wa_clear(RGBA color);
 void wa_clear_depth(float *ptr, i32 len);
@@ -137,9 +143,13 @@ M4f wa_orthographic(float l, float r, float b, float t, float n, float f);
 M4f wa_perspective(float l, float r, float b, float t, float n, float f);
 M4f wa_perspective_fov(float fov, float n, float f);
 
-void wa_render(                                                            //
-    const VAO &vao, const Buf<V3i> triangles,                              //
-    FrontFace front_face, VertexSh_fp vertex_sh, FragmentSh_fp fragment_sh //
+void wa_render(                                                       //
+    const VAO &vao, const Buf<V3i> triangles,                         //
+    FrontFace front, VertexSh_fp vertex_sh, FragmentSh_fp fragment_sh //
+);
+void wa_render_shadow(                                     //
+    const VAO &vao, const Buf<V3i> triangles,              //
+    FrontFace front, ShadowSh_fp shadow_sh, PLightS &light //
 );
 
 float wa_fline(float x, float y, float px, float py, float qx, float qy);
