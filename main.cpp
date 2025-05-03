@@ -18,7 +18,7 @@ enum __VAOBuf {
     BUF_MVP,
     BUF_TEXTURE,
     BUF_TEXTURE_COLORS,
-    BUF_POINT_LIGHTS,
+    BUF_PLIGHTS,
     __BUF_CNT,
 };
 
@@ -34,7 +34,7 @@ enum __VAOUnif {
     UNIF_MVP,
     UNIF_TEXTURE,
     UNIF_TEXTURE_COLORS,
-    UNIF_POINT_LIGHTS,
+    UNIF_PLIGHTS,
     __UNIF_CNT,
 };
 
@@ -79,11 +79,45 @@ VertexShOut vertex_sh(i32 v_idx, i32 tri_v_idx, const VAO &vao) {
 FragmentShOut fragment_sh(const VAO &vao) {
     const Texture &texture = *vao.unif_texture(UNIF_TEXTURE);
     const Buf<RGBA> &texture_colors = vao.unif_rgba(UNIF_TEXTURE_COLORS);
-    const Buf<PointLight> &lights = vao.unif_point_light(UNIF_POINT_LIGHTS);
+    const Buf<PLightS> &lights = vao.unif_p_light_s(UNIF_PLIGHTS);
     const V2f &uv = vao.out_bary_v2f(OUT_UV);
     const V3f &vertex = vao.out_bary_v3f(OUT_V);
     const V3f &normal = vao.out_bary_v3f(OUT_N);
     // const V4f &color = vao.out_bary_v4f(OUT_COLOR);
+
+    V3f n = normal.norm();
+    V4f color_v4 = V4f::zeros();
+    V4f vertex_v4 = v4_point(vertex);
+    for (i32 i = 0; i < lights.len; ++i) {
+        const PLightS &light = lights[i];
+
+        V4f vp_v = light.vp * vertex_v4;
+        V3f canonical = persp_div(vp_v);
+
+        float z = canonical.z();
+        canonical = light.w * V3f{canonical.x(), canonical.y(), 1};
+        canonical.z() = z; // TODO: Cumbersome
+
+        float x = canonical.x();
+        float y = canonical.y();
+        i32 rows = light.depth_map.rows;
+        i32 cols = light.depth_map.cols;
+
+        i32 lit = 1;
+        i32 in = wa_buf_in(x, y, rows, cols);
+        if (in) {
+            float bias = 0.01f;
+            i32 idx = wa_buf_idx(x, y, rows, cols);
+            lit = (z - bias) <= light.depth_map[idx];
+        }
+
+        if (lit) {
+            V3f v = (light.point - vertex).norm();
+            float dot = max(0.0f, V3f::dot(n, v));
+
+            color_v4 += dot * light.color;
+        }
+    }
 
     V4f r = texture_colors[0].v4f();
     V4f g = texture_colors[1].v4f();
@@ -96,26 +130,24 @@ FragmentShOut fragment_sh(const VAO &vao) {
         b.x(), b.y(), b.z(), b.w(), //
         1,     1,     1,     1,     //
     };
-    V4f color_v4f = m * mask;
+    color_v4 += m * mask;
 
-    V3f n = normal.norm();
-    for (i32 i = 0; i < lights.len; ++i) {
-        const PointLight &light = lights[i];
-
-        V3f v = (light.point - vertex).norm();
-        float dot = max(0.0f, V3f::dot(n, v));
-
-        color_v4f += dot * light.color;
-    }
-
-    RGBA out_color = RGBA::from_v4f(color_v4f);
+    RGBA out_color = RGBA::from_v4f(color_v4);
     return {out_color};
+}
+
+V4f shadow_sh(i32 v_idx, i32 tri_v_idx, const VAO &vao, const PLightS &light) {
+    const V3f &vertex = vao.in_v3f(IN_V, v_idx);
+
+    V4f vp_v = light.vp * v4_point(vertex);
+    return vp_v;
 }
 
 int main() {
     prof_rename(SLOT_LOOP, "loop");
     prof_rename(SLOT_WA_CLEAR, "wa_clear");
     prof_rename(SLOT_WA_RENDER, "wa_render");
+    prof_rename(SLOT_WA_RENDER_SHADOW, "wa_render_shadow");
 
     float dist_to_origin = 5.0f;
     RGBA g = {.ptr = {127, 127, 127, 255}};
@@ -152,7 +184,7 @@ int main() {
         {0, 0, 0, 0}, // {255, 255, 255, 255},
     };
 
-    FrontFace front_face = FrontFace::CCW;
+    FrontFace front = FrontFace::CCW;
     V3i triangles_[] = {
         {0, 1, 2},
         {3, 4, 5},
@@ -181,7 +213,7 @@ int main() {
     float pl_y = -1.0f;
     V3f pl_n = {0, 1, 0};
     RGBA pl_rgba = {0, 0, 0, 0};
-    FrontFace front_face_pl = FrontFace::CCW;
+    FrontFace front_pl = FrontFace::CCW;
     V3i triangles_pl_[] = {
         {0, 1, 2},
         {2, 3, 0},
@@ -224,19 +256,28 @@ int main() {
     };
     Buf<RGBA> texture_colors = BUF_FROM_C_ARR(texture_colors_);
 
-    PointLight lights_[] = {
-        {{2.0f, 2.0f, 2.0f}, {0.5, 0.5, 0.5, 0}},
+    V3f p_light = {2.0f, 2.0f, 2.0f};
+    M4f v_light = wa_look_at(p_light, at, up);
+    M4f p_light_ = wa_perspective_fov((fov * M_PI) / 180.0f, n, f);
+    float buf_light_[128 * 128];
+    Buf2D<float> buf_light = {buf_light_, 128, 128};
+
+    PLightS light = {
+        {2.0f, 2.0f, 2.0f}, {0.5, 0.5, 0.5, 0}, wa_viewport(128, 128),
+        p_light_ * v_light, buf_light,
     };
-    Buf<PointLight> lights = BUF_FROM_C_ARR(lights_);
+
+    PLightS lights_[] = {light};
+    Buf<PLightS> lights = BUF_FROM_C_ARR(lights_);
 
     vao.buf(BUF_TEXTURE, &texture, 1);
     vao.buf(BUF_TEXTURE_COLORS, texture_colors.ptr, texture_colors.len);
-    vao.buf(BUF_POINT_LIGHTS, lights.ptr, lights.len);
+    vao.buf(BUF_PLIGHTS, lights.ptr, lights.len);
 
     vao.unif(BUF_MVP, UNIF_MVP, VAOType::M4f);
     vao.unif(BUF_TEXTURE, UNIF_TEXTURE, VAOType::Texture);
     vao.unif(BUF_TEXTURE_COLORS, UNIF_TEXTURE_COLORS, VAOType::RGBA);
-    vao.unif(BUF_POINT_LIGHTS, UNIF_POINT_LIGHTS, VAOType::PointLight);
+    vao.unif(BUF_PLIGHTS, UNIF_PLIGHTS, VAOType::PLightS);
 
     vao.in(                                                     //
         BUF_V, IN_UV,                                           //
@@ -271,6 +312,8 @@ int main() {
         t = tf;
 
         wa_clear(g);
+        wa_clear_depth(light.depth_map.ptr,
+                       light.depth_map.rows * light.depth_map.cols);
 
         eye.x() = dist_to_origin * cosf(elapsed);
         eye.y() = dist_to_origin * sinf(elapsed + M_PI);
@@ -282,10 +325,11 @@ int main() {
         vao.buf(BUF_MVP, &mvp, 1);
 
         vao.buf(BUF_V, vertices.ptr, vertices.len);
-        wa_render(vao, triangles, front_face, vertex_sh, fragment_sh);
+        wa_render_shadow(vao, triangles, front, shadow_sh, light);
+        wa_render(vao, triangles, front, vertex_sh, fragment_sh);
 
         vao.buf(BUF_V, vertices_pl.ptr, vertices_pl.len);
-        wa_render(vao, triangles_pl, front_face_pl, vertex_sh, fragment_sh);
+        wa_render(vao, triangles_pl, front_pl, vertex_sh, fragment_sh);
 
         wa_swap_bufs();
         sceDisplayWaitVblankStart();
