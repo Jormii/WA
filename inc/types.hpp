@@ -2,7 +2,7 @@
 
 #include <math.h> // TODO: Remove
 
-#include "cpp.hpp"
+#include "vfpu.hpp"
 
 #pragma region struct
 
@@ -35,9 +35,17 @@ using Texture = Buf2D<RGBA>;
 RGBA texture_sample(const V2f &uv, const Texture &texture);
 RGBA texture_sample(float u, float v, const Texture &texture);
 
-struct PointLight {
+struct PLight {
     V3f point;
     V4f color;
+};
+
+struct PLightS {
+    V3f point;
+    V4f color;
+    M3f w;
+    VFPU_ALIGNED M4f vp;
+    Buf2D<float> depth_map;
 };
 
 #pragma endregion

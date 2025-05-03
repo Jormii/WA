@@ -147,8 +147,12 @@ const Buf<Texture> &VAO::unif_texture(i32 unif_idx) const {
     return __UNIF_GET(Texture, unif_idx);
 }
 
-const Buf<PointLight> &VAO::unif_point_light(i32 unif_idx) const {
-    return __UNIF_GET(PointLight, unif_idx);
+const Buf<PLight> &VAO::unif_p_light(i32 unif_idx) const {
+    return __UNIF_GET(PLight, unif_idx);
+}
+
+const Buf<PLightS> &VAO::unif_p_light_s(i32 unif_idx) const {
+    return __UNIF_GET(PLightS, unif_idx);
 }
 
 #undef __UNIF_GET
