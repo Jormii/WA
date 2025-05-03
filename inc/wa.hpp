@@ -122,6 +122,7 @@ typedef FragmentShOut (*FragmentSh_fp)(const VAO &vao);
 
 [[nodiscard]] i32 wa_init();
 void wa_clear(RGBA color);
+void wa_clear_depth(float *ptr, i32 len);
 void wa_swap_bufs();
 
 [[nodiscard]] i32 wa_buf_in(float x, float y);

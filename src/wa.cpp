@@ -367,6 +367,15 @@ void wa_clear(RGBA color) {
 #undef CLEAR_Z_ROW
 }
 
+void wa_clear_depth(float *ptr, i32 len) {
+    MUST(c_arr_check(ptr, len));
+
+    float z = CANONICAL_Z_CLEAR;
+    for (i32 i = 0; i < len; ++i) {
+        ptr[i] = z;
+    }
+}
+
 void wa_swap_bufs() {
     SWAP(draw_buf, display_buf);
     sceDisplaySetFrameBuf(display_buf, FRAME_BUF_WIDTH, PIXEL_FMT, SETBUF);
