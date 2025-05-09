@@ -115,7 +115,8 @@ struct VertexShOut {
 };
 
 struct FragmentShOut {
-    RGBA color;
+    V4f color;
+    i32 discard;
 };
 
 typedef VertexShOut (*VertexSh_fp)(i32 v_idx, i32 tri_v_idx, const VAO &vao);

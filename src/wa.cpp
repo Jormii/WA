@@ -607,8 +607,23 @@ void wa_render(                                                       //
                     vao.__make_bary(alpha, beta, gamma);
                     FragmentShOut out = fragment_sh(vao);
 
-                    draw_buf[idx] = out.color;
-                    z_buf[idx] = z;
+                    float a = out.color.w();
+                    i32 discard = out.discard || (eq(a, 0.0f) || a < 0.0f);
+                    if (!discard) {
+                        RGBA c;
+                        if (eq(a, 1.0f) || a > 1.0f) {
+                            c = RGBA::from_v4f(out.color);
+                        } else {
+                            V4f src = out.color;
+                            V4f dst = draw_buf[idx].v4f();
+                            V4f blend = a * src + (1.0f - a) * dst;
+
+                            c = RGBA::from_v4f(blend);
+                        }
+
+                        z_buf[idx] = z;
+                        draw_buf[idx] = c;
+                    }
                 }
             }
         }
