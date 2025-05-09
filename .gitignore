@@ -1,2 +1,3 @@
 *.o
+*gmon.out
 /__py_scripts/env/

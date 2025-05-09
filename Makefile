@@ -18,18 +18,38 @@ ASFLAGS = $(CFLAGS)
 LIBDIR =
 LDFLAGS =
 
+PRXS = 0 1
+ifeq ($(PRX), 0)
+BUILD_PRX = 0
+else ifeq ($(PRX), 1)
+BUILD_PRX = 1
+else
+$(error Unsupported PRX=$(PRX). Allowed: $(PRXS))
+endif
+
 BUILDS = TEST DEBUG RELEASE
 ifeq ($(BUILD), TEST)
 OBJS := $(MAIN_TEST) $(OBJS) $(OBJS_TEST)
-CFLAGS := $(CFLAGS)
+CFLAGS := $(CFLAGS) -g3 -pg
+LDFLAGS := $(LDFLAGS) -g3 -pg
 else ifeq ($(BUILD), DEBUG)
 OBJS := $(MAIN) $(OBJS)
-CFLAGS := $(CFLAGS)
+CFLAGS := $(CFLAGS) -g3 -pg
+LDFLAGS := $(LDFLAGS) -g3 -pg
 else ifeq ($(BUILD), RELEASE)
 OBJS := $(MAIN) $(OBJS)
 CFLAGS := $(CFLAGS) -O2 -D NDEBUG
 else
 $(error Unsupported BUILD=$(BUILD). Allowed: $(BUILDS))
+endif
+
+PPSSPPS = 0 1
+ifeq ($(PPSSPP), 0)
+CFLAGS := $(CFLAGS)
+else ifeq ($(PPSSPP), 1)
+CFLAGS := $(CFLAGS) -D PPSSPP
+else
+$(error Unsupported PPSSPP=$(PPSSPP). Allowed: $(PPSSPPS))
 endif
 
 DEBUGGERS = 0 1
@@ -41,7 +61,6 @@ else
 $(error Unsupported DEBUGGER=$(DEBUGGER). Allowed: $(DEBUGGERS))
 endif
 
-BUILD_PRX = 1
 EXTRA_TARGETS = EBOOT.PBP
 PSP_EBOOT_TITLE = $(TARGET)
 
