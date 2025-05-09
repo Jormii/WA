@@ -95,3 +95,5 @@ inline void mul_mm<4, float>(const float *m, const float *a, float *out) {
 }
 
 #pragma endregion
+
+#define TAG() asm("vmzero.p M000;");
