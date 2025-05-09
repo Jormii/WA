@@ -58,8 +58,9 @@ extern i32 Arr_cross_test(void);
 extern i32 Arr_mix_test(void);
 extern i32 Arr_bary_test(void);
 extern i32 Arr_operator_subscript_test(void);
-extern i32 Arr_operator_add_test(void);
+extern i32 Arr_operator_add_i32_test(void);
 extern i32 Arr_operator_neg_test(void);
+extern i32 Arr_operator_add_Arr_test(void);
 extern i32 Arr_operator_add_assign_test(void);
 extern i32 Arr_operator_div_test(void);
 extern i32 Arr_operator_sub_test(void);
@@ -127,7 +128,7 @@ extern i32 __VFPU_deinit_test(void);
 
 int main(void) {
 	i32 passed = 0;
-	const i32 N_TESTS = 100;
+	const i32 N_TESTS = 101;
 
 	testing_started_cb();
 
@@ -170,8 +171,9 @@ int main(void) {
 	passed += test_function_cb(Arr_mix_test, "Arr_mix_test");
 	passed += test_function_cb(Arr_bary_test, "Arr_bary_test");
 	passed += test_function_cb(Arr_operator_subscript_test, "Arr_operator_subscript_test");
-	passed += test_function_cb(Arr_operator_add_test, "Arr_operator_add_test");
+	passed += test_function_cb(Arr_operator_add_i32_test, "Arr_operator_add_i32_test");
 	passed += test_function_cb(Arr_operator_neg_test, "Arr_operator_neg_test");
+	passed += test_function_cb(Arr_operator_add_Arr_test, "Arr_operator_add_Arr_test");
 	passed += test_function_cb(Arr_operator_add_assign_test, "Arr_operator_add_assign_test");
 	passed += test_function_cb(Arr_operator_div_test, "Arr_operator_div_test");
 	passed += test_function_cb(Arr_operator_sub_test, "Arr_operator_sub_test");
