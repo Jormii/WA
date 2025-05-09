@@ -106,7 +106,7 @@ FragmentShOut fragment_sh(const VAO &vao) {
         i32 lit = 1;
         i32 in = wa_buf_in(x, y, rows, cols);
         if (in) {
-            float bias = 0.01f;
+            float bias = 0.05f;
             i32 idx = wa_buf_idx(x, y, rows, cols);
             lit = (z - bias) <= light.depth_map[idx];
         }
@@ -132,8 +132,10 @@ FragmentShOut fragment_sh(const VAO &vao) {
     };
     color_v4 += m * mask;
 
-    RGBA out_color = RGBA::from_v4f(color_v4);
-    return {out_color};
+    color_v4.w() = 0.5f; // Uhh
+
+    i32 discard = 0;
+    return {color_v4, discard};
 }
 
 V4f shadow_sh(i32 v_idx, i32 tri_v_idx, const VAO &vao, const PLightS &light) {
@@ -326,10 +328,12 @@ int main() {
 
         vao.buf(BUF_V, vertices.ptr, vertices.len);
         wa_render_shadow(vao, triangles, front, shadow_sh, light);
-        wa_render(vao, triangles, front, vertex_sh, fragment_sh);
 
         vao.buf(BUF_V, vertices_pl.ptr, vertices_pl.len);
         wa_render(vao, triangles_pl, front_pl, vertex_sh, fragment_sh);
+
+        vao.buf(BUF_V, vertices.ptr, vertices.len);
+        wa_render(vao, triangles, front, vertex_sh, fragment_sh);
 
         wa_swap_bufs();
         sceDisplayWaitVblankStart();
