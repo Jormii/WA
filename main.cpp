@@ -307,6 +307,13 @@ int main() {
     float elapsed = 0;
     clock_t t = clock();
     while (!exit_request) {
+#ifdef PPSSPP
+        if (elapsed > 30.0f) {
+            break;
+            // TODO: For gprof's sake. Something more sophisticated eventually
+        }
+#endif
+
         prof_kick(SLOT_LOOP);
 
         clock_t tf = clock();
@@ -342,7 +349,10 @@ int main() {
         prof_dump();
     }
 
+#ifndef PPSSPP
     sceKernelExitGame();
+// NOTE: PPSSPP abruptly ends the emulation thus interfering with gprof
+#endif
     return 0;
 }
 
