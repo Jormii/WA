@@ -11,7 +11,7 @@
 // NOTE: PPSSPP's debugger flips rows and columns.
 //       To simplify debugging VFPU_R and VFPU_C are swapped as well.
 #define VFPU_M(MAT) "M" #MAT "00"
-#define VFPU_C(MAT, ROW, COL) "R" #MAT #ROW #COL
+#define VFPU_C(MAT, ROW, COL) "R" #MAT #COL #ROW
 #define VFPU_R(MAT, ROW, COL) "C" #MAT #ROW #COL
 
 #define VFPU_OP_LOAD "lv"
