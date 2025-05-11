@@ -333,37 +333,106 @@ i32 wa_init() {
 
 void wa_clear(RGBA color) {
 #define CLEAR_MAT 0
-#define CLEAR_RGBA_ROW 0
+#define CLEAR_C_ROW 0
 #define CLEAR_Z_ROW 1
+
+    // NOTE: RGBA loop unrolling (Number of sv.q instructions, PPSSPP cycles)
+    // - 1, 794
+    // - 2, 556
+    // - 4, 437
+    // - 8, 378
+    // - 16, 348
+    // - 32, 333
+    // - 64, 326 <- "Best" but since we need to write color and depth we use 32
+    // - 128, 322
+    // - 256, 320
+    // - 512, 319
+    // - 1024, 319
 
     prof_kick(SLOT_WA_CLEAR);
 
-    RGBA *rgba_ptr = draw_buf;
+    RGBA *c_ptr = draw_buf;
     float *z_ptr = z_buf;
 
     i32 c = color.rgba;
     float z = CANONICAL_Z_CLEAR;
-    VFPU_ALIGNED i32 rgba_row[] = {c, c, c, c};
+    VFPU_ALIGNED i32 c_row[] = {c, c, c, c};
     VFPU_ALIGNED float z_row[] = {z, z, z, z};
-    VFPU_LOAD_V4_ROW(CLEAR_MAT, CLEAR_RGBA_ROW, rgba_row, 0);
+
+    VFPU_LOAD_V4_ROW(CLEAR_MAT, CLEAR_C_ROW, c_row, 0);
     VFPU_LOAD_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_row, 0);
 
-    for (i32 _ = 0; _ < FRAME_BUF_SIZE; _ += 16, rgba_ptr += 16, z_ptr += 16) {
-        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_RGBA_ROW, rgba_ptr, 0);
-        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_RGBA_ROW, rgba_ptr, 16);
-        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_RGBA_ROW, rgba_ptr, 32);
-        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_RGBA_ROW, rgba_ptr, 48);
-
-        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_ptr, 0);
-        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_ptr, 16);
-        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_ptr, 32);
-        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_ptr, 48);
+    for (i32 _ = 0; _ < FRAME_BUF_SIZE; _ += 128, c_ptr += 128, z_ptr += 128) {
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_C_ROW, c_ptr, 16 * 0);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_ptr, 16 * 0);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_C_ROW, c_ptr, 16 * 1);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_ptr, 16 * 1);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_C_ROW, c_ptr, 16 * 2);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_ptr, 16 * 2);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_C_ROW, c_ptr, 16 * 3);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_ptr, 16 * 3);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_C_ROW, c_ptr, 16 * 4);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_ptr, 16 * 4);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_C_ROW, c_ptr, 16 * 5);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_ptr, 16 * 5);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_C_ROW, c_ptr, 16 * 6);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_ptr, 16 * 6);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_C_ROW, c_ptr, 16 * 7);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_ptr, 16 * 7);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_C_ROW, c_ptr, 16 * 8);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_ptr, 16 * 8);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_C_ROW, c_ptr, 16 * 9);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_ptr, 16 * 9);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_C_ROW, c_ptr, 16 * 10);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_ptr, 16 * 10);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_C_ROW, c_ptr, 16 * 11);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_ptr, 16 * 11);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_C_ROW, c_ptr, 16 * 12);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_ptr, 16 * 12);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_C_ROW, c_ptr, 16 * 13);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_ptr, 16 * 13);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_C_ROW, c_ptr, 16 * 14);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_ptr, 16 * 14);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_C_ROW, c_ptr, 16 * 15);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_ptr, 16 * 15);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_C_ROW, c_ptr, 16 * 16);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_ptr, 16 * 16);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_C_ROW, c_ptr, 16 * 17);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_ptr, 16 * 17);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_C_ROW, c_ptr, 16 * 18);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_ptr, 16 * 18);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_C_ROW, c_ptr, 16 * 19);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_ptr, 16 * 19);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_C_ROW, c_ptr, 16 * 20);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_ptr, 16 * 20);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_C_ROW, c_ptr, 16 * 21);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_ptr, 16 * 21);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_C_ROW, c_ptr, 16 * 22);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_ptr, 16 * 22);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_C_ROW, c_ptr, 16 * 23);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_ptr, 16 * 23);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_C_ROW, c_ptr, 16 * 24);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_ptr, 16 * 24);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_C_ROW, c_ptr, 16 * 25);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_ptr, 16 * 25);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_C_ROW, c_ptr, 16 * 26);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_ptr, 16 * 26);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_C_ROW, c_ptr, 16 * 27);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_ptr, 16 * 27);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_C_ROW, c_ptr, 16 * 28);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_ptr, 16 * 28);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_C_ROW, c_ptr, 16 * 29);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_ptr, 16 * 29);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_C_ROW, c_ptr, 16 * 30);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_ptr, 16 * 30);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_C_ROW, c_ptr, 16 * 31);
+        VFPU_STORE_V4_ROW(CLEAR_MAT, CLEAR_Z_ROW, z_ptr, 16 * 31);
     }
 
     prof_stop(SLOT_WA_CLEAR);
 
 #undef CLEAR_MAT
-#undef CLEAR_RGBA_ROW
+#undef CLEAR_C_ROW
 #undef CLEAR_Z_ROW
 }
 
