@@ -96,4 +96,8 @@ inline void mul_mm<4, float>(const float *m, const float *a, float *out) {
 
 #pragma endregion
 
+#ifndef PPSSPP
+#define TAG()
+#else
 #define TAG() asm("vmzero.p M000;");
+#endif
