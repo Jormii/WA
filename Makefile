@@ -21,6 +21,8 @@ LDFLAGS =
 PRXS = 0 1
 ifeq ($(PRX), 0)
 BUILD_PRX = 0
+CFLAGS := $(CFLAGS) -g3 -pg
+LDFLAGS := $(LDFLAGS) -g3 -pg
 else ifeq ($(PRX), 1)
 BUILD_PRX = 1
 else
@@ -30,12 +32,10 @@ endif
 BUILDS = TEST DEBUG RELEASE
 ifeq ($(BUILD), TEST)
 OBJS := $(MAIN_TEST) $(OBJS) $(OBJS_TEST)
-CFLAGS := $(CFLAGS) -g3 -pg
-LDFLAGS := $(LDFLAGS) -g3 -pg
+CFLAGS := $(CFLAGS) -g3
 else ifeq ($(BUILD), DEBUG)
 OBJS := $(MAIN) $(OBJS)
-CFLAGS := $(CFLAGS) -g3 -pg
-LDFLAGS := $(LDFLAGS) -g3 -pg
+CFLAGS := $(CFLAGS) -g3
 else ifeq ($(BUILD), RELEASE)
 OBJS := $(MAIN) $(OBJS)
 CFLAGS := $(CFLAGS) -O2 -D NDEBUG
