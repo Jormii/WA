@@ -26,6 +26,37 @@ Bone Bone::init_I(i32 parent_idx, const V3f &position) {
     return bone;
 }
 
+void Skeleton::update() {
+    // REFERENCE (this made me go crazy bruv)
+    // https://www.youtube.com/watch?v=ZzMnu3v_MOw
+
+    bones[0].transform_global = bones[0].transform;
+
+    for (i32 i = 1; i < bones.len; ++i) {
+        Bone &bone = bones[i];
+        Bone &parent = bones[bone.parent_idx];
+        MUST(bone.parent_idx < i);
+
+        // TODO: Why this order?
+        bone.transform_global = parent.transform_global * bone.transform;
+    }
+
+    for (i32 i = 0; i < bones.len; ++i) {
+        Bone &bone = bones[i];
+        bone.transform_global = bone.transform_global * bone.m_inv;
+    }
+}
+
+Skeleton Skeleton::init(const Buf<Bone> &bones, const Buf2D<float> weights) {
+    // TODO: Check hierarchy
+    // TODO: Check sum(weights) == 1
+    // TODO: Check 0 <= weights <= 1
+    MUST(bones.len == weights.cols);
+
+    Skeleton skeleton = {bones, weights};
+    return skeleton;
+}
+
 void VAO::buf(i32 buf_idx, void *ptr, i32 len) {
     MUST(c_arr_idx_check(bufs.ptr, bufs.len, buf_idx));
     MUST(c_arr_check(ptr, len));
@@ -161,6 +192,10 @@ const Buf<PLight> &VAO::unif_p_light(i32 unif_idx) const {
 
 const Buf<PLightS> &VAO::unif_p_light_s(i32 unif_idx) const {
     return __UNIF_GET(PLightS, unif_idx);
+}
+
+const Buf<Skeleton> &VAO::unif_skeleton(i32 unif_idx) const {
+    return __UNIF_GET(Skeleton, unif_idx);
 }
 
 #undef __UNIF_GET

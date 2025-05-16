@@ -35,6 +35,7 @@ enum class VAOType {
     Texture,
     PLight,
     PLightS,
+    Skeleton,
 };
 
 enum class FrontFace {
@@ -50,6 +51,15 @@ struct Bone {
     VFPU_ALIGNED M4f transform_global; // Updated by {Skeleton::update()}
 
     static Bone init_I(i32 parent_idx, const V3f &position);
+};
+
+struct Skeleton {
+    Buf<Bone> bones;
+    Buf2D<float> weights; // rows === Vertices, cols === Bones
+
+    static Skeleton init(const Buf<Bone> &bones, const Buf2D<float> weights);
+
+    void update();
 };
 
 struct VAOBuf {
@@ -101,6 +111,7 @@ struct VAO {
     const Buf<Texture> &unif_texture(i32 unif_idx) const;
     const Buf<PLight> &unif_p_light(i32 unif_idx) const;
     const Buf<PLightS> &unif_p_light_s(i32 unif_idx) const;
+    const Buf<Skeleton> &unif_skeleton(i32 unif_idx) const;
     const VAOBuf &__get_unif(i32 unif_idx, VAOType type) const;
 
     V2f &out_v2f(i32 out_idx, i32 tri_v_idx) const;
