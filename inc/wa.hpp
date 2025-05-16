@@ -144,6 +144,12 @@ M4f wa_orthographic(float l, float r, float b, float t, float n, float f);
 M4f wa_perspective(float l, float r, float b, float t, float n, float f);
 M4f wa_perspective_fov(float fov, float n, float f);
 
+M4f wa_rot_x(float angle);
+M4f wa_rot_y(float angle);
+M4f wa_rot_z(float angle);
+M4f wa_translate(const V3f &point);
+M4f wa_translate_inv(const V3f &point);
+
 void wa_render(                                                       //
     const VAO &vao, const Buf<V3i> triangles,                         //
     FrontFace front, VertexSh_fp vertex_sh, FragmentSh_fp fragment_sh //

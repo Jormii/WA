@@ -572,6 +572,67 @@ M4f wa_perspective_fov(float fov, float n, float f) {
     return wa_perspective(-r, r, -t, t, n, f);
 }
 
+M4f wa_rot_x(float angle) {
+    float cos = cosf(angle);
+    float sin = sinf(angle);
+    M4f m = {
+        1, 0,   0,    0, //
+        0, cos, -sin, 0, //
+        0, sin, cos,  0, //
+        0, 0,   0,    1, //
+    };
+
+    return m;
+}
+
+M4f wa_rot_y(float angle) {
+    float cos = cosf(angle);
+    float sin = sinf(angle);
+    M4f m = {
+        cos,  0, sin, 0, //
+        0,    1, 0,   0, //
+        -sin, 0, cos, 0, //
+        0,    0, 0,   1, //
+    };
+
+    return m;
+}
+
+M4f wa_rot_z(float angle) {
+    float cos = cosf(angle);
+    float sin = sinf(angle);
+    M4f m = {
+        cos, -sin, 0, 0, //
+        sin, cos,  0, 0, //
+        0,   0,    1, 0, //
+        0,   0,    0, 1, //
+    };
+
+    return m;
+}
+
+M4f wa_translate(const V3f &point) {
+    M4f m = {
+        1, 0, 0, point.x(), //
+        0, 1, 0, point.y(), //
+        0, 0, 1, point.z(), //
+        0, 0, 0, 1,         //
+    };
+
+    return m;
+}
+
+M4f wa_translate_inv(const V3f &point) {
+    M4f m = {
+        1, 0, 0, -point.x(), //
+        0, 1, 0, -point.y(), //
+        0, 0, 1, -point.z(), //
+        0, 0, 0, 1,          //
+    };
+
+    return m;
+}
+
 void wa_render(                                                       //
     const VAO &vao, const Buf<V3i> triangles,                         //
     FrontFace front, VertexSh_fp vertex_sh, FragmentSh_fp fragment_sh //
