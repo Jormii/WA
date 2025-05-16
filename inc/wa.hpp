@@ -43,6 +43,15 @@ enum class FrontFace {
     BACKFACE,
 };
 
+struct Bone {
+    i32 parent_idx;
+    VFPU_ALIGNED M4f m_inv;            // Model
+    VFPU_ALIGNED M4f transform;        // Local (respective to parent)
+    VFPU_ALIGNED M4f transform_global; // Updated by {Skeleton::update()}
+
+    static Bone init_I(i32 parent_idx, const V3f &position);
+};
+
 struct VAOBuf {
     void *ptr;
     i32 len;

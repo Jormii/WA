@@ -18,6 +18,14 @@ static RGBA *draw_buf = (RGBA *)DRAW_BUF_ADDR;
 static RGBA *display_buf = (RGBA *)DISPLAY_BUF_ADDR;
 static float *z_buf = NULL;
 
+Bone Bone::init_I(i32 parent_idx, const V3f &position) {
+    M4f m_inv = wa_translate_inv(position);
+    M4f transformation = M4f::I();
+
+    Bone bone = {parent_idx, m_inv, transformation, transformation};
+    return bone;
+}
+
 void VAO::buf(i32 buf_idx, void *ptr, i32 len) {
     MUST(c_arr_idx_check(bufs.ptr, bufs.len, buf_idx));
     MUST(c_arr_check(ptr, len));
