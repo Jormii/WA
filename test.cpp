@@ -82,6 +82,8 @@ extern i32 Mat_I_test(void);
 extern i32 Mat_ones_test(void);
 extern i32 Mat_zeros_test(void);
 extern i32 Mat_operator_mul_Arr_test(void);
+extern i32 Mat_operator_add_test(void);
+extern i32 Mat_operator_add_assign_test(void);
 extern i32 Mat_operator_mul_Mat_test(void);
 extern i32 Mat_operator_eq_test(void);
 extern i32 Mat_operator_mul_test(void);
@@ -128,7 +130,7 @@ extern i32 __VFPU_deinit_test(void);
 
 int main(void) {
 	i32 passed = 0;
-	const i32 N_TESTS = 101;
+	const i32 N_TESTS = 103;
 
 	testing_started_cb();
 
@@ -195,6 +197,8 @@ int main(void) {
 	passed += test_function_cb(Mat_ones_test, "Mat_ones_test");
 	passed += test_function_cb(Mat_zeros_test, "Mat_zeros_test");
 	passed += test_function_cb(Mat_operator_mul_Arr_test, "Mat_operator_mul_Arr_test");
+	passed += test_function_cb(Mat_operator_add_test, "Mat_operator_add_test");
+	passed += test_function_cb(Mat_operator_add_assign_test, "Mat_operator_add_assign_test");
 	passed += test_function_cb(Mat_operator_mul_Mat_test, "Mat_operator_mul_Mat_test");
 	passed += test_function_cb(Mat_operator_eq_test, "Mat_operator_eq_test");
 	passed += test_function_cb(Mat_operator_mul_test, "Mat_operator_mul_test");
