@@ -1,7 +1,7 @@
 TARGET = WA_$(BUILD)
 
 MAIN = main.o
-OBJS = 	cb.o src/types.o src/vfpu.o src/wa.o \
+OBJS = 	cb.o src/types.o src/vfpu.o src/wa.o src/wv_obj.o \
 		C-CPP-CodeBase/c.o
 
 MAIN_TEST = test.o
