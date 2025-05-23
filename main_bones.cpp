@@ -52,23 +52,28 @@ VertexShOut vertex_sh(i32 v_idx, i32 tri_v_idx, const VAO &vao) {
     const V3f &vertex = vao.in_v3f(IN_V, v_idx);
     const V3f &normal = vao.in_v3f(IN_N, v_idx);
 
-    V4f v = V4f::zeros();
-    VFPU_ALIGNED V4f vertex_v4 = v4_point(vertex);
+    M4f m = M4f::zeros();
     for (i32 bone_idx = 0; bone_idx < skeleton.bones.len; ++bone_idx) {
         const Bone &bone = skeleton.bones[bone_idx];
         const float weight = skeleton.weights.get(v_idx, bone_idx);
 
-        v += (weight * bone.transform_global) * vertex_v4;
+        m += weight * bone.transform_global;
     }
 
-    V4f mvp_v = mvp * v;
-    vao.out_v3f(OUT_N, tri_v_idx) = normal;
+    V4f out_n = m * v4_vector(normal);
+    V4f out_v = mvp * (m * v4_point(vertex));
 
-    return {mvp_v};
+    vao.out_v3f(OUT_N, tri_v_idx) = out_n.xyz();
+
+    return {out_v};
 }
 
 FragmentShOut fragment_sh(const VAO &vao) {
-    V4f color_v4 = V4f::ones();
+    const V3f &normal = vao.out_bary_v3f(OUT_N);
+
+    V3f n = normal.norm();
+
+    V4f color_v4 = {fabsf(n.x()), fabsf(n.y()), fabsf(n.z()), 1};
     i32 discard = 0;
     return {color_v4, discard};
 }
